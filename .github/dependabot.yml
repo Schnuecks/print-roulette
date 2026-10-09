@@ -1,0 +1,28 @@
+# Dependabot proposes updates as pull requests; patch and minor updates are merged by CI
+# once the checks pass, major updates wait for a manual review. The cooldown only proposes
+# versions that are at least a week old. Security updates are not delayed.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "CI"
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "Docker"

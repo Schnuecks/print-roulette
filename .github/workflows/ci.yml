@@ -1,0 +1,121 @@
+name: CI
+
+# Pull requests run the syntax check, a smoke test of the server and the Docker image
+# for all platforms. A push to main is the squash of a checked pull request, so only the
+# tests run there. The image is uploaded to ghcr.io only for a version tag (v1.2.3).
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  PLATFORMS: linux/amd64,linux/arm64
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m py_compile app.py
+      - name: Smoke test
+        run: |
+          PORT=8099 python app.py &
+          sleep 2
+          curl -fs http://127.0.0.1:8099/healthz
+          curl -fs http://127.0.0.1:8099/api/sources | python -c "import json,sys; s=json.load(sys.stdin); assert len(s)==4, s"
+          curl -fs http://127.0.0.1:8099/ | grep -q "Print Roulette"
+
+  image:
+    needs: test
+    if: github.event_name != 'push' || github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - id: release
+        run: echo "push=${{ startsWith(github.ref, 'refs/tags/v') }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        if: steps.release.outputs.push == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ steps.release.outputs.push }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: ${{ env.PLATFORMS }}
+          push: ${{ steps.release.outputs.push == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: print-roulette:scan
+          provenance: false
+          sbom: false
+          cache-from: type=gha
+      - name: Smoke test
+        run: |
+          docker run -d --rm --name pr -p 8080:8080 print-roulette:scan
+          sleep 3
+          curl -fs http://127.0.0.1:8080/healthz
+          docker stop pr
+      - uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: print-roulette:scan
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: table
+          exit-code: "0"
+      - uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: print-roulette:scan
+          severity: CRITICAL
+          ignore-unfixed: true
+          format: table
+          exit-code: "1"
+          skip-setup-trivy: true
+
+  dependabot-merge:
+    # Merges Dependabot pull requests for patch and minor updates once the checks passed.
+    needs: [test, image]
+    if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@v3
+      - name: Merge patch and minor updates
+        if: steps.meta.outputs.update-type == 'version-update:semver-patch' || steps.meta.outputs.update-type == 'version-update:semver-minor'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --squash "$PR_URL"
