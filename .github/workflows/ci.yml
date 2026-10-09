@@ -14,7 +14,8 @@ permissions:
   contents: read
 
 env:
-  PLATFORMS: linux/amd64,linux/arm64
+  # Only amd64 for now; arm64 would need QEMU (helper image from Docker Hub) or an arm64 runner.
+  PLATFORMS: linux/amd64
 
 jobs:
   test:
@@ -46,8 +47,19 @@ jobs:
       - uses: actions/checkout@v7
       - id: release
         run: echo "push=${{ startsWith(github.ref, 'refs/tags/v') }}" >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-qemu-action@v4
+      - name: Check version matches tag
+        if: steps.release.outputs.push == 'true'
+        run: |
+          version=$(python3 app.py --version)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match __version__ $version" >&2
+            exit 1
+          fi
+      # BuildKit and the base image come from Google's Docker Hub mirror, which has no
+      # anonymous pull limit; the finished image is published to ghcr.io.
       - uses: docker/setup-buildx-action@v4
+        with:
+          driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
       - uses: docker/login-action@v4
         if: steps.release.outputs.push == 'true'
         with:
@@ -84,6 +96,7 @@ jobs:
           cache-from: type=gha
       - name: Smoke test
         run: |
+          docker run --rm print-roulette:scan python app.py --version
           docker run -d --rm --name pr -p 8080:8080 print-roulette:scan
           sleep 3
           curl -fs http://127.0.0.1:8080/healthz
@@ -103,6 +116,38 @@ jobs:
           format: table
           exit-code: "1"
           skip-setup-trivy: true
+
+  release:
+    # Creates the GitHub release from the matching CHANGELOG section
+    needs: image
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes=$(awk -v v="${GITHUB_REF_NAME#v}" '
+            /^## / { if (found) exit; if ($0 == "## " v) { found=1; next } }
+            found { print }' CHANGELOG.md)
+          gh release create "$GITHUB_REF_NAME" --title "Print Roulette ${GITHUB_REF_NAME#v}" --notes "${notes:-See CHANGELOG.md}"
+
+  cleanup:
+    # Removes older image versions after a release (keeps the last releases)
+    needs: image
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ github.event.repository.name }}
+          package-type: container
+          min-versions-to-keep: 5
 
   dependabot-merge:
     # Merges Dependabot pull requests for patch and minor updates once the checks passed.

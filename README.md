@@ -17,6 +17,8 @@ Jede Variable kann auch als `NAME_FILE` auf eine Datei zeigen (Docker-Secrets). 
 
 ## Starten
 
+Fertiges Image: `ghcr.io/schnuecks/print-roulette` (Tags `0.1.0`, `0.1`, `latest`). Oder selbst bauen:
+
 ```bash
 docker compose up -d --build
 ```

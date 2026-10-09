@@ -7,6 +7,7 @@ import mimetypes
 import os
 import random
 import re
+import sys
 import threading
 import time
 import urllib.error
@@ -15,8 +16,10 @@ import urllib.request
 from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+__version__ = "0.1.0"
+
 PORT = int(os.environ.get("PORT", "8080"))
-UA = os.environ.get("USER_AGENT", "PrintRoulette/1.0 (+https://roulette.hessis.eu)")
+UA = os.environ.get("USER_AGENT", f"PrintRoulette/{__version__} (+https://roulette.hessis.eu)")
 STATIC_DIR = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "static"))
 DAY = 24 * 3600
 MAX_BODY = 8 * 1024 * 1024  # größte erwartete Antwort (Sitemap-Seite ≈ 1,3 MB)
@@ -455,6 +458,9 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    if "--version" in sys.argv:
+        print(__version__)
+        raise SystemExit(0)
     mimetypes.add_type("application/javascript", ".js")
     active = ", ".join(s.name for s in SOURCES.values() if s.enabled)
     log.info("Print Roulette läuft auf Port %s; aktive Quellen: %s", PORT, active)
