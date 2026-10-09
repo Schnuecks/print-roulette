@@ -1,6 +1,6 @@
 name: CI
 
-# Pull requests run the syntax check, a smoke test of the server and the Docker image
+# Pull requests run lint (incl. security rules), a smoke test of the server and the Docker image
 # for all platforms. A push to main is the squash of a checked pull request, so only the
 # tests run there. The image is uploaded to ghcr.io only for a version tag (v1.2.3).
 
@@ -24,7 +24,9 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - run: python -m py_compile app.py
+      - run: pip install ruff
+      - run: ruff check .
+      - run: ruff format --check .
       - name: Smoke test
         run: |
           PORT=8099 python app.py &

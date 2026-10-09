@@ -1,0 +1,28 @@
+:root { --bg:#f4f4f5; --card:#fff; --fg:#18181b; --muted:#71717a; --border:#e4e4e7; --accent:#71717a; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#111113; --card:#1c1c1f; --fg:#f4f4f5; --muted:#a1a1aa; --border:#2a2a2e; }
+}
+* { box-sizing:border-box; }
+body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--fg);
+       font:16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding:16px; }
+main { width:100%; max-width:520px; text-align:center; }
+h1 { font-size:1.1rem; font-weight:600; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin:0 0 20px; }
+.card { background:var(--card); border:2px solid var(--border); border-top:8px solid var(--accent); border-radius:16px;
+        padding:24px; min-height:170px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:10px;
+        transition:border-color .3s, box-shadow .3s; box-shadow:0 0 0 0 var(--accent); }
+.card.hit { box-shadow:0 8px 32px -12px var(--accent); }
+.card img { max-width:100%; max-height:240px; min-height:60px; border-radius:10px; object-fit:cover; background:var(--bg); }
+.card a.title { color:var(--fg); font-size:1.35rem; font-weight:600; text-decoration:none; word-break:break-word; }
+.card a.title:hover { text-decoration:underline; }
+.card small { color:var(--muted); }
+.card .badge { display:inline-block; font-size:.75rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+               color:#fff; background:var(--accent); border-radius:999px; padding:2px 10px; }
+.card .error { color:#dc2626; }
+.buttons { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:20px; }
+button { padding:12px 22px; font-size:.95rem; font-weight:600; color:#fff; background:var(--btn, #555);
+         border:0; border-radius:999px; cursor:pointer; transition:transform .1s, filter .15s; }
+button:hover:not(:disabled) { filter:brightness(1.1); transform:translateY(-1px); }
+button:disabled { opacity:.45; cursor:not-allowed; }
+button.busy { cursor:wait; opacity:.7; }
+footer { margin-top:28px; color:var(--muted); font-size:.8rem; }
+footer a { color:inherit; }

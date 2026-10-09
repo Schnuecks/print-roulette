@@ -24,3 +24,11 @@ docker compose up -d --build
 Danach auf http://localhost:8080. Ohne Docker: `python app.py`.
 
 Weitere Einstellungen: `MW_LANG` (Sprache der MakerWorld-Links, Standard `en`), `USER_AGENT`, `CULTS_MAX_OFFSET`.
+
+## Sicherheit
+
+- Der Browser bekommt nur Links und Bilder auf bekannte Hosts der vier Plattformen, alles andere wird verworfen.
+- Strikte Content-Security-Policy ohne Inline-Code, dazu die üblichen Schutz-Header.
+- Ratenbegrenzung pro IP (`RATE_PER_MINUTE`, Standard 30 Würfe pro Minute). Hinter einem Proxy zählt `X-Forwarded-For` (`TRUST_PROXY=1`), ohne Proxy auf `0` setzen.
+- Antworten der Plattformen sind auf 8 MB begrenzt, Fehlertexte gehen nur ins Log, nicht an den Browser.
+- Der Container läuft ohne Root, read-only und ohne Capabilities. CI prüft mit Ruff (inkl. Sicherheitsregeln) und scannt das Image mit Trivy.

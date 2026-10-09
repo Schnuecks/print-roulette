@@ -1,0 +1,10 @@
+line-length = 120
+target-version = "py312"
+
+[lint]
+# E/F: Fehler und Stil, B: Fallstricke, S: Sicherheitsregeln (bandit), UP: moderne Syntax
+select = ["E", "F", "B", "S", "UP"]
+ignore = [
+  "S311",  # random reicht fürs Würfeln, hier wird nichts Kryptografisches gewürfelt
+  "S104",  # 0.0.0.0 ist im Container gewollt
+]
