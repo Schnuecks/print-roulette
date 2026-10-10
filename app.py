@@ -3,7 +3,6 @@
 import base64
 import json
 import logging
-import mimetypes
 import os
 import random
 import re
@@ -433,6 +432,16 @@ class RateLimiter:
 
 LIMITER = RateLimiter(RATE_PER_MINUTE)
 
+STATIC_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".woff2": "font/woff2",
+    ".txt": "text/plain; charset=utf-8",
+}
+
 SECURITY_HEADERS = {
     "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; "
     "img-src 'self' https:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; "
@@ -520,9 +529,11 @@ class Handler(BaseHTTPRequestHandler):
         if not file.startswith(STATIC_DIR + os.sep) or not os.path.isfile(file):
             self._send(404, b"not found", "text/plain")
             return
-        ctype = mimetypes.guess_type(file)[0] or "application/octet-stream"
-        if ctype.startswith("text/") or ctype in ("application/javascript", "text/javascript"):
-            ctype += "; charset=utf-8"
+        # Feste Liste statt Ableitung aus dem Pfad: nur bekannte Dateitypen werden ausgeliefert
+        ctype = STATIC_TYPES.get(os.path.splitext(file)[1].lower())
+        if not ctype:
+            self._send(404, b"not found", "text/plain")
+            return
         with open(file, "rb") as fh:
             body = fh.read()
         if file.endswith(".html"):
@@ -538,9 +549,6 @@ if __name__ == "__main__":
     if "--version" in sys.argv:
         print(__version__)
         raise SystemExit(0)
-    mimetypes.add_type("application/javascript", ".js")
-    mimetypes.add_type("image/svg+xml", ".svg")
-    mimetypes.add_type("font/woff2", ".woff2")
     active = ", ".join(s.name for s in SOURCES.values() if s.enabled)
     log.info("Print Roulette läuft auf Port %s; aktive Quellen: %s", PORT, active)
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

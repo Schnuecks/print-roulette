@@ -2,6 +2,10 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
+## Unveröffentlicht
+
+- Statische Dateien werden nur noch mit fest hinterlegten Dateitypen ausgeliefert, unbekannte Endungen ergeben 404 (Hinweis aus CodeQL).
+
 ## 0.3.0
 
 - Eigenes Logo: Glücksrad in den Plattformfarben mit goldener Nabe, auch als Favicon und App-Icon.
