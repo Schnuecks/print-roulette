@@ -1,12 +1,16 @@
+# Zum lokalen Bauen aus dem Quellcode. Fertiges Image und vollständiges Beispiel: siehe README.
 services:
   print-roulette:
     build: .
     container_name: print-roulette
     restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
     ports:
       - "8080:8080"
     environment:
-      MW_LANG: en
-      # CULTS_USER: dein-nickname
+      PUBLIC_URL: http://localhost:8080
+      TRUST_PROXY: "0"
+      # CULTS_USER: dein-cults-nickname
       # CULTS_API_KEY_FILE: /run/secrets/cults_api_key
       # THINGIVERSE_TOKEN_FILE: /run/secrets/thingiverse_token

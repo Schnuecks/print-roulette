@@ -1,43 +1,153 @@
+<p align="center"><img src="static/logo.svg" width="96" alt="Print Roulette"></p>
+
 # Print Roulette
 
-Kleine Webseite mit Glücksrad: Dreh am Rad oder wähl eine Plattform direkt und bekomm ein zufälliges 3D-Modell mit Link.
+**English** · [Deutsch](README.de.md)
 
-Quellen: MakerWorld, Printables, Cults3D, Thingiverse. Keine Datenbank, kein Login, nichts wird gespeichert.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
+  <img src="https://img.shields.io/badge/dependencies-none-4C9A2A" alt="No dependencies">
+  <a href="https://github.com/Schnuecks/print-roulette/pkgs/container/print-roulette"><img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker ready"></a>
+  <img src="https://img.shields.io/badge/platform-amd64-E4572E" alt="Platform amd64">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-4C9A2A" alt="License AGPL-3.0"></a>
+  <img src="https://img.shields.io/badge/maintained-yes-4C9A2A" alt="Maintained">
+</p>
 
-## Quellen und Zugänge
+Spin the wheel and discover a random 3D print. Print Roulette picks a model from
+**MakerWorld**, **Printables**, **Cults3D** or **Thingiverse** and links straight to its page,
+for the evenings when you want to print something but don't know what.
 
-| Quelle | Woher | Zugang |
-|---|---|---|
-| MakerWorld | öffentliche Sitemaps, nur Titel + Link | keiner |
-| Printables | öffentliche GraphQL-API, Zufalls-ID | keiner |
-| Cults3D | offizielle GraphQL-API | `CULTS_USER` + `CULTS_API_KEY` (Schlüssel unter cults3d.com/en/api/keys) |
-| Thingiverse | offizielle REST-API, Zufalls-ID | `THINGIVERSE_TOKEN` (App-Token unter thingiverse.com/developers) |
+<p align="center">
+  <img src="docs/screenshots/desktop-dark.png" width="640" alt="Print Roulette with the prize wheel, a result and the history">
+  &nbsp;
+  <img src="docs/screenshots/mobile-light.png" width="200" alt="Print Roulette on a phone in light mode">
+</p>
 
-Jede Variable kann auch als `NAME_FILE` auf eine Datei zeigen (Docker-Secrets). Fehlt der Zugang, ist der Button ausgegraut.
+## Features
 
-## Bedienung
+- **Prize wheel** in the platform colours: spin for a random platform, or click a segment or
+  button to roll on one platform directly
+- **Preview image, title and creator** wherever the platform provides them; every result
+  links to the original model page
+- **Filters** for free models only and for hiding NSFW content (on by default)
+- **History** of the last twelve rolls, stored only in your own browser
+- **Keyboard:** the space bar rolls again the same way as last time
+- **No database, no login, no tracking:** nothing is stored on the server
+- **Light and dark mode**, works on phones, respects “reduce motion”
+- **Small container:** standard library only, runs as a non-root user with a read-only file
+  system and a built-in health check
 
-- **Rad drehen:** wählt zufällig eine Plattform und dann ein Modell. Ein Klick auf ein Segment oder einen Plattform-Button würfelt gezielt dort.
-- **Leertaste:** würfelt noch mal wie zuletzt.
-- **Filter:** „Nur kostenlose Modelle“ und „NSFW ausblenden“ (Standard an). Printables, Cults3D und Thingiverse liefern die nötigen Angaben, MakerWorld nicht; dort weist die Karte darauf hin.
-- **Verlauf:** die letzten zwölf Würfe, nur im eigenen Browser gespeichert.
+## Platforms
 
-## Starten
+| Platform | Source | Access | Free filter | NSFW filter |
+|---|---|---|---|---|
+| MakerWorld | public sitemaps, title and link only | none | – | – |
+| Printables | public GraphQL API, random model ID | none | ✓ | ✓ |
+| Cults3D | official GraphQL API, random week since 2014 | nickname + API key | ✓ | ✓ |
+| Thingiverse | official REST API, random model ID | app token | always free | ✓ |
 
-Fertiges Image: `ghcr.io/schnuecks/print-roulette` (Tags je Version, z. B. `0.2.0` und `0.2`, sowie `latest`). Oder selbst bauen:
+Platforms without access are greyed out and left off the wheel. MakerWorld's sitemaps carry
+no price or NSFW information, so the result card says when a filter cannot apply there.
 
-```bash
-docker compose up -d --build
+## Quick start
+
+```yaml
+services:
+  print-roulette:
+    image: ghcr.io/schnuecks/print-roulette:latest
+    container_name: print-roulette
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    ports:
+      - "8080:8080"
+    environment:
+      PUBLIC_URL: https://roulette.example.com
+      CULTS_USER: your-cults-nickname
+      CULTS_API_KEY_FILE: /run/secrets/cults_api_key
+      THINGIVERSE_TOKEN_FILE: /run/secrets/thingiverse_token
+    secrets:
+      - cults_api_key
+      - thingiverse_token
+
+secrets:
+  cults_api_key:
+    file: ./secrets/cults_api_key.txt
+  thingiverse_token:
+    file: ./secrets/thingiverse_token.txt
 ```
 
-Danach auf http://localhost:8080. Ohne Docker: `python app.py`.
+```bash
+docker compose up -d
+```
 
-Weitere Einstellungen: `MW_LANG` (Sprache der MakerWorld-Links, Standard `en`), `PUBLIC_URL` (für das Vorschaubild geteilter Links, Standard `https://roulette.hessis.eu`), `USER_AGENT`.
+Then open http://localhost:8080. Without Docker: `python app.py` (Python 3.12, no packages
+needed).
 
-## Sicherheit
+### Getting access
 
-- Der Browser bekommt nur Links und Bilder auf bekannte Hosts der vier Plattformen, alles andere wird verworfen.
-- Strikte Content-Security-Policy ohne Inline-Code, dazu die üblichen Schutz-Header.
-- Ratenbegrenzung pro IP (`RATE_PER_MINUTE`, Standard 30 Würfe pro Minute). Hinter einem Proxy zählt `X-Forwarded-For` (`TRUST_PROXY=1`), ohne Proxy auf `0` setzen.
-- Antworten der Plattformen sind auf 8 MB begrenzt, Fehlertexte gehen nur ins Log, nicht an den Browser.
-- Der Container läuft ohne Root, read-only und ohne Capabilities. CI prüft mit Ruff (inkl. Sicherheitsregeln) und scannt das Image mit Trivy.
+- **Cults3D:** create a read-only API key at [cults3d.com/en/api/keys](https://cults3d.com/en/api/keys).
+  The username is your Cults nickname.
+- **Thingiverse:** create an app at [thingiverse.com/developers](https://www.thingiverse.com/developers)
+  (type “Web App”) and use its *App Token*.
+
+Docker secrets are mounted with the permissions of the file on the host. If the container
+cannot read them, run it with your user (`user: "1000:1000"`) or make the files readable.
+
+## Configuration
+
+Every variable holding a credential can also be given as `NAME_FILE`, pointing to a file.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PORT` | `8080` | Port inside the container |
+| `PUBLIC_URL` | `https://roulette.hessis.eu` | Public address, used for the link preview image |
+| `CULTS_USER`, `CULTS_API_KEY` | – | Cults3D access |
+| `THINGIVERSE_TOKEN` | – | Thingiverse app token |
+| `MW_LANG` | `en` | Language of MakerWorld links (`en`, `de`, …) |
+| `RATE_PER_MINUTE` | `30` | Rolls per IP and minute |
+| `TRUST_PROXY` | `1` | Count clients by `X-Forwarded-For` (behind a reverse proxy); set `0` without a proxy |
+| `USER_AGENT` | `PrintRoulette/<version> (+PUBLIC_URL)` | User agent for requests to the platforms |
+| `SOURCE_URL` | `https://github.com/Schnuecks/print-roulette` | Link to the source code in the footer; empty hides it |
+| `PRINTABLES_MAX_ID`, `THINGIVERSE_MAX_ID` | built in | Starting point for the highest model ID; the app probes upwards once a day |
+
+## How it stays friendly to the platforms
+
+- MakerWorld: the sitemap index is fetched at most once a day, sitemap pages are cached.
+- Cults3D: at most one API call every three minutes, results are kept in a pool, well
+  below the daily limit.
+- Printables and Thingiverse: one request per roll, plus a short daily probe for new IDs.
+- Every request identifies itself with an honest user agent.
+
+## Security
+
+- Links and images reach the browser only if they use HTTPS and point to known hosts of
+  the four platforms.
+- Strict Content Security Policy without inline code, plus the usual protective headers.
+- Rate limit per IP, responses from the platforms are capped at 8 MB, error details stay in
+  the log.
+- Fonts are served locally; apart from the platforms' preview images the page loads nothing
+  from third parties.
+- CI checks the code with Ruff (including security rules) and scans the image with Trivy.
+
+## License
+
+Copyright (C) 2026 Schnuecks
+
+Print Roulette is free software under the
+[GNU Affero General Public License, version 3 or later](LICENSE) (AGPL-3.0-or-later). You
+may use, modify and share it.
+
+If you distribute a modified version or offer it to others over a network, you must make
+the source code of your version available to them under the same license. The “Source
+code on GitHub” link in the footer does that for this version; for your own version,
+point it to your source code with `SOURCE_URL`.
+
+The program is provided without any warranty. See the [license](LICENSE) for details.
+The fonts Playfair Display and Manrope in `static/fonts/` are under the SIL Open Font
+License (see the `OFL-*.txt` files there); Print Roulette serves them itself, so the page
+loads no fonts from Google or other servers.
+
+Print Roulette is an independent hobby project and not affiliated with MakerWorld,
+Printables, Cults3D or Thingiverse. Models and images belong to their platforms and
+creators.

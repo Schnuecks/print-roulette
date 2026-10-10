@@ -2,6 +2,15 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
+## 0.3.0
+
+- Eigenes Logo: Glücksrad in den Plattformfarben mit goldener Nabe, auch als Favicon und App-Icon.
+- Edlere Schrift: Playfair Display für Überschriften, Rad und Buttons, Manrope für Text; goldener Schriftzug.
+- Schriften liegen lokal auf dem Server, die Seite lädt keine Schriften von Dritten.
+- Neues Vorschaubild für geteilte Links.
+- README auf Englisch und Deutsch mit Screenshots, Einstellungen und Hinweisen zu den Zugängen.
+- Lizenz: GNU AGPL 3.0 oder später. Der Footer verlinkt auf den Quellcode (`SOURCE_URL`, leer blendet den Link aus).
+
 ## 0.2.0
 
 - Glücksrad in den Plattformfarben: Drehen wählt eine zufällige Plattform, Segmente und Buttons wählen gezielt.

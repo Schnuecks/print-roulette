@@ -15,12 +15,17 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preload" href="/fonts/playfair-display-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <main>
-  <h1>Print Roulette</h1>
+  <header class="brand">
+    <img src="/logo.svg" alt="" width="48" height="48">
+    <h1>Print <span>Roulette</span></h1>
+  </header>
 
   <div class="wheel-wrap" id="wheel-wrap">
     <svg class="wheel" id="wheel-svg" viewBox="0 0 300 300" role="img" aria-labelledby="wheel-title">
@@ -49,7 +54,10 @@
     <div class="history-list" id="history"></div>
   </section>
 
-  <footer>Unabhängiges Hobbyprojekt. Modelle und Bilder gehören den jeweiligen Plattformen und Erstellern.</footer>
+  <footer>
+    Unabhängiges Hobbyprojekt. Modelle und Bilder gehören den jeweiligen Plattformen und Erstellern.
+    <!--source--><br><a href="__SOURCE_URL__" rel="noopener noreferrer">Quellcode auf GitHub</a> · AGPL-3.0<!--/source-->
+  </footer>
 </main>
 <script src="/app.js" defer></script>
 </body>

@@ -16,7 +16,7 @@ import urllib.request
 from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 PORT = int(os.environ.get("PORT", "8080"))
 UA = os.environ.get("USER_AGENT", f"PrintRoulette/{__version__} (+https://roulette.hessis.eu)")
@@ -26,6 +26,8 @@ MAX_BODY = 8 * 1024 * 1024  # größte erwartete Antwort (Sitemap-Seite ≈ 1,3 
 RATE_PER_MINUTE = int(os.environ.get("RATE_PER_MINUTE", "30"))  # Würfe pro IP und Minute
 TRUST_PROXY = os.environ.get("TRUST_PROXY", "1") == "1"  # X-Forwarded-For von Traefik
 PUBLIC_URL = os.environ.get("PUBLIC_URL", "https://roulette.hessis.eu").rstrip("/")  # für Vorschau-Links
+# Link auf den Quellcode im Footer (AGPL); leer lassen blendet ihn aus
+SOURCE_URL = os.environ.get("SOURCE_URL", "https://github.com/Schnuecks/print-roulette").strip()
 
 log = logging.getLogger("roulette")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -55,6 +57,14 @@ def safe_url(url):
     if parts.scheme != "https" or parts.hostname not in ALLOWED_HOSTS:
         return None
     return url
+
+
+def safe_source_url():
+    """Nur https-Links in den Footer, sonst ausblenden."""
+    parts = urllib.parse.urlsplit(SOURCE_URL) if SOURCE_URL else None
+    if not parts or parts.scheme != "https" or not parts.hostname or '"' in SOURCE_URL or "<" in SOURCE_URL:
+        return ""
+    return SOURCE_URL
 
 
 def clean_model(model):
@@ -425,7 +435,7 @@ LIMITER = RateLimiter(RATE_PER_MINUTE)
 
 SECURITY_HEADERS = {
     "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; "
-    "img-src 'self' https:; connect-src 'self'; manifest-src 'self'; base-uri 'none'; "
+    "img-src 'self' https:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; "
     "form-action 'none'; frame-ancestors 'none'",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
@@ -517,6 +527,10 @@ class Handler(BaseHTTPRequestHandler):
             body = fh.read()
         if file.endswith(".html"):
             body = body.replace(b"__PUBLIC_URL__", PUBLIC_URL.encode())
+            if safe_source_url():
+                body = body.replace(b"__SOURCE_URL__", safe_source_url().encode())
+            else:
+                body = re.sub(rb"<!--source-->.*?<!--/source-->", b"", body, flags=re.S)
         self._send(200, body, ctype, "public, max-age=300")
 
 
@@ -526,6 +540,7 @@ if __name__ == "__main__":
         raise SystemExit(0)
     mimetypes.add_type("application/javascript", ".js")
     mimetypes.add_type("image/svg+xml", ".svg")
+    mimetypes.add_type("font/woff2", ".woff2")
     active = ", ".join(s.name for s in SOURCES.values() if s.enabled)
     log.info("Print Roulette läuft auf Port %s; aktive Quellen: %s", PORT, active)
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

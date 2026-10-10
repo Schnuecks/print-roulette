@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Print Roulette">
+  <!-- Print Roulette: a prize wheel in the four platform colours with a pointer -->
+  <rect width="64" height="64" rx="14" fill="#1C1C22"/>
+  <g transform="translate(32 35)">
+    <circle r="23" fill="#2A2A33"/>
+    <path d="M0 0 0-21A21 21 0 0 1 21 0Z" fill="#00AE42"/>
+    <path d="M0 0 21 0A21 21 0 0 1 0 21Z" fill="#FA6831"/>
+    <path d="M0 0 0 21A21 21 0 0 1-21 0Z" fill="#822EF5"/>
+    <path d="M0 0-21 0A21 21 0 0 1 0-21Z" fill="#248BFB"/>
+    <g stroke="#1C1C22" stroke-width="2.2">
+      <path d="M0-21V21M-21 0H21"/>
+    </g>
+    <circle cx="8.24" cy="-20.40" r="0.95" fill="#F5F5F7" opacity=".55"/>
+    <circle cx="20.25" cy="-8.60" r="0.95" fill="#F5F5F7" opacity=".55"/>
+    <circle cx="20.40" cy="8.24" r="0.95" fill="#F5F5F7" opacity=".55"/>
+    <circle cx="8.60" cy="20.25" r="0.95" fill="#F5F5F7" opacity=".55"/>
+    <circle cx="-8.24" cy="20.40" r="0.95" fill="#F5F5F7" opacity=".55"/>
+    <circle cx="-20.25" cy="8.60" r="0.95" fill="#F5F5F7" opacity=".55"/>
+    <circle cx="-20.40" cy="-8.24" r="0.95" fill="#F5F5F7" opacity=".55"/>
+    <circle cx="-8.60" cy="-20.25" r="0.95" fill="#F5F5F7" opacity=".55"/>
+    <circle r="7.5" fill="#1C1C22" stroke="#C9A54B" stroke-width="1.4"/>
+    <circle r="3" fill="#F5F5F7"/>
+  </g>
+  <path d="M32 18.5 27 8.5H37Z" fill="#F5F5F7"/>
+</svg>
