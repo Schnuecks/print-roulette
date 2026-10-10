@@ -132,6 +132,24 @@ Every variable holding a credential can also be given as `NAME_FILE`, pointing t
   from third parties.
 - CI checks the code with Ruff (including security rules) and scans the image with Trivy.
 
+What changed in each version is listed in the [CHANGELOG](CHANGELOG.md).
+
+## Support
+
+Print Roulette is free and stays free. If it found you a nice print, you can buy me a coffee;
+it keeps the project going. Thank you!
+
+<p>
+  <a href="https://buymeacoffee.com/il6hhwtzr6"><img src="https://img.shields.io/badge/Buy_me_a_coffee-10_%E2%82%AC-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee: 10 €"></a>
+  <a href="https://buymeacoffee.com/il6hhwtzr6"><img src="https://img.shields.io/badge/Buy_me_a_coffee-25_%E2%82%AC-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee: 25 €"></a>
+  <a href="https://buymeacoffee.com/il6hhwtzr6"><img src="https://img.shields.io/badge/Buy_me_a_coffee-50_%E2%82%AC-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee: 50 €"></a>
+</p>
+
+## Feedback
+
+Bug reports and ideas are welcome as [GitHub issues](https://github.com/Schnuecks/print-roulette/issues).
+Security problems please report privately, see [SECURITY.md](SECURITY.md).
+
 ## License
 
 Copyright (C) 2026 Schnuecks

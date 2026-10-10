@@ -136,6 +136,24 @@ Jede Variable mit einem Zugang kann auch als `NAME_FILE` auf eine Datei zeigen.
   Plattformen nichts von Dritten.
 - Die CI prüft den Code mit Ruff (inklusive Sicherheitsregeln) und scannt das Image mit Trivy.
 
+Was sich in einer Version geändert hat, steht im [CHANGELOG](CHANGELOG.md).
+
+## Unterstützen
+
+Print Roulette ist kostenlos und bleibt es. Wenn es dir einen schönen Druck beschert hat, kannst
+du mir einen Kaffee ausgeben; das hält das Projekt am Laufen. Danke!
+
+<p>
+  <a href="https://buymeacoffee.com/il6hhwtzr6"><img src="https://img.shields.io/badge/Buy_me_a_coffee-10_%E2%82%AC-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee: 10 €"></a>
+  <a href="https://buymeacoffee.com/il6hhwtzr6"><img src="https://img.shields.io/badge/Buy_me_a_coffee-25_%E2%82%AC-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee: 25 €"></a>
+  <a href="https://buymeacoffee.com/il6hhwtzr6"><img src="https://img.shields.io/badge/Buy_me_a_coffee-50_%E2%82%AC-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee: 50 €"></a>
+</p>
+
+## Rückmeldungen
+
+Fehler und Ideen sind als [Issue auf GitHub](https://github.com/Schnuecks/print-roulette/issues)
+willkommen. Sicherheitsprobleme bitte vertraulich melden, siehe [SECURITY.md](SECURITY.md).
+
 ## Lizenz
 
 Copyright (C) 2026 Schnuecks
