@@ -2,6 +2,15 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
+## 0.2.0
+
+- Glücksrad in den Plattformfarben: Drehen wählt eine zufällige Plattform, Segmente und Buttons wählen gezielt.
+- Filter „Nur kostenlose Modelle“ und „NSFW ausblenden“ (Standard an) für Printables, Cults3D und Thingiverse; MakerWorld zeigt einen Hinweis, weil die Sitemap keine Angaben liefert.
+- Verlauf der letzten zwölf Würfe im Browser, Leertaste würfelt erneut.
+- Cults3D würfelt jetzt aus zufälligen Wochen seit 2014 statt nur aus den neuesten 50.000 Modellen.
+- Der erste Wurf auf Printables und Thingiverse wartet nicht mehr auf die tägliche Suche nach der höchsten Modell-ID.
+- Favicon und Vorschaubild für geteilte Links; Animationen ruhen bei „Bewegung reduzieren“.
+
 ## 0.1.0
 
 Erste Version.

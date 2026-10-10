@@ -16,7 +16,7 @@ import urllib.request
 from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 PORT = int(os.environ.get("PORT", "8080"))
 UA = os.environ.get("USER_AGENT", f"PrintRoulette/{__version__} (+https://roulette.hessis.eu)")
@@ -25,6 +25,7 @@ DAY = 24 * 3600
 MAX_BODY = 8 * 1024 * 1024  # größte erwartete Antwort (Sitemap-Seite ≈ 1,3 MB)
 RATE_PER_MINUTE = int(os.environ.get("RATE_PER_MINUTE", "30"))  # Würfe pro IP und Minute
 TRUST_PROXY = os.environ.get("TRUST_PROXY", "1") == "1"  # X-Forwarded-For von Traefik
+PUBLIC_URL = os.environ.get("PUBLIC_URL", "https://roulette.hessis.eu").rstrip("/")  # für Vorschau-Links
 
 log = logging.getLogger("roulette")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -109,12 +110,29 @@ class Source:
     color = ""
     enabled = True
     reason = ""
+    # Welche Filter die Quelle prüfen kann
+    can_free = False
+    can_nsfw = False
 
     def info(self):
-        return {"key": self.key, "name": self.name, "color": self.color, "enabled": self.enabled, "reason": self.reason}
+        return {
+            "key": self.key,
+            "name": self.name,
+            "color": self.color,
+            "enabled": self.enabled,
+            "reason": self.reason,
+            "filters": {"free": self.can_free, "nsfw": self.can_nsfw},
+        }
 
-    def random(self):
+    def random(self, free=False, safe=True):
         raise NotImplementedError
+
+
+def passes(model, free, safe):
+    """Prüft die Filter anhand der internen Felder _paid und _nsfw."""
+    if free and model.get("_paid"):
+        return False
+    return not (safe and model.get("_nsfw"))
 
 
 # ---------------------------------------------------------------- MakerWorld
@@ -155,7 +173,8 @@ class MakerWorld(Source):
                 self.cache.popitem(last=False)
         return models
 
-    def random(self):
+    def random(self, free=False, safe=True):
+        # Die Sitemap kennt weder Preis noch NSFW-Kennzeichen, Filter greifen hier nicht
         pages = self.sitemap_pages()
         for _ in range(3):
             models = self.models_from_page(random.choice(pages))
@@ -179,7 +198,7 @@ class RandomIdSource(Source):
 
     start_max = 1
     step = 1
-    attempts = 10
+    attempts = 12
 
     def __init__(self):
         self.lock = threading.Lock()
@@ -191,10 +210,6 @@ class RandomIdSource(Source):
         raise NotImplementedError
 
     def probe_max(self):
-        with self.lock:
-            if time.time() - self.probed < DAY:
-                return
-            self.probed = time.time()
         hi = self.max_id
         # nach oben tasten, solange Treffer kommen (max. 20 Schritte)
         for _ in range(20):
@@ -206,23 +221,36 @@ class RandomIdSource(Source):
         with self.lock:
             self.max_id = max(self.max_id, hi)
 
-    def random(self):
-        try:
-            self.probe_max()
-        except Exception as exc:
-            log.warning("%s: Obergrenze nicht geprüft: %s", self.key, exc)
+    def probe_in_background(self):
+        """Tastet die Obergrenze höchstens einmal am Tag ab, ohne den Wurf aufzuhalten."""
+        with self.lock:
+            if time.time() - self.probed < DAY:
+                return
+            self.probed = time.time()
+
+        def run():
+            try:
+                self.probe_max()
+            except Exception as exc:
+                log.warning("%s: Obergrenze nicht geprüft: %s", self.key, exc)
+
+        threading.Thread(target=run, name=f"probe-{self.key}", daemon=True).start()
+
+    def random(self, free=False, safe=True):
+        self.probe_in_background()
         for _ in range(self.attempts):
             model = self.exists(random.randint(1, self.max_id))
-            if model:
+            if model and passes(model, free, safe):
                 return model
-        raise RuntimeError("Nach mehreren Versuchen kein gültiges Modell gefunden")
+        raise RuntimeError("Nach mehreren Versuchen kein passendes Modell gefunden")
 
 
 class Printables(RandomIdSource):
     key, name, color = "printables", "Printables", "#FA6831"
+    can_free = can_nsfw = True
     start_max, step = 1_800_000, 20_000
     API = "https://api.printables.com/graphql/"
-    QUERY = '{ print(id: "%d") { id name slug image { filePath } user { publicUsername } } }'
+    QUERY = '{ print(id: "%d") { id name slug nsfw price premium image { filePath } user { publicUsername } } }'
 
     def exists(self, mid):
         data = json.loads(http(self.API, {"query": self.QUERY % mid})).get("data", {}).get("print")
@@ -238,11 +266,14 @@ class Printables(RandomIdSource):
             "image": image,
             "creator": (data.get("user") or {}).get("publicUsername"),
             "url": f"https://www.printables.com/model/{data['id']}-{data['slug']}",
+            "_nsfw": bool(data.get("nsfw")),
+            "_paid": bool(data.get("price")) or bool(data.get("premium")),
         }
 
 
 class Thingiverse(RandomIdSource):
     key, name, color = "thingiverse", "Thingiverse", "#248BFB"
+    can_free = can_nsfw = True  # Thingiverse ist durchgehend kostenlos
     start_max, step = 7_000_000, 50_000
     API = "https://api.thingiverse.com"
 
@@ -268,6 +299,8 @@ class Thingiverse(RandomIdSource):
             "image": data.get("thumbnail"),
             "creator": (data.get("creator") or {}).get("name"),
             "url": data["public_url"],
+            "_nsfw": bool(data.get("is_nsfw")),
+            "_paid": False,
         }
 
 
@@ -275,36 +308,45 @@ class Thingiverse(RandomIdSource):
 
 
 class Cults(Source):
+    """Offizielle API. Würfelt ein zufälliges Wochenfenster seit 2014 und hält die Treffer vorrätig."""
+
     key, name, color = "cults", "Cults3D", "#822EF5"
+    can_free = can_nsfw = True
     API = "https://cults3d.com/graphql"
-    QUERY = """query($limit: Int!, $offset: Int!) {
-      creations(limit: $limit, offset: $offset) {
-        name(locale: EN) url(locale: EN) illustrationImageUrl creator { nick }
-      } }"""
-    BATCH = 50
-    POOL_MAX = 500  # höchstens 10 Pakete im Speicher
-    REFILL_EVERY = 180  # Sekunden zwischen zwei API-Aufrufen (weit unter 500/Tag)
-    MAX_OFFSET = int(os.environ.get("CULTS_MAX_OFFSET", "50000"))
+    QUERY = """query($after: ISO8601DateTime, $before: ISO8601DateTime, $free: Boolean) {
+      creationsBatch(limit: 50, offset: 0, onlyFree: $free, submittedAfter: $after, submittedBefore: $before) {
+        results {
+          name(locale: EN) url(locale: EN) illustrationImageUrl safe
+          price(currency: EUR) { cents } creator { nick }
+        } } }"""
+    START = 1388534400  # 2014-01-01, Start von Cults
+    WINDOW = 7 * DAY
+    POOL_MAX = 500
+    MIN_INTERVAL = 180  # Sekunden zwischen zwei API-Aufrufen, hält das Tageslimit (≈ 500) sicher ein
 
     def __init__(self):
         self.user, self.apikey = secret("CULTS_USER"), secret("CULTS_API_KEY")
         if not (self.user and self.apikey):
             self.enabled, self.reason = False, "Kein API-Schlüssel (CULTS_USER / CULTS_API_KEY) hinterlegt"
         self.lock = threading.Lock()
-        self.pool, self.filled = [], 0.0
+        self.pools = {False: [], True: []}  # Schlüssel: nur kostenlos?
+        self.last_call = 0.0
 
-    def fill(self):
+    def fill(self, free):
         auth = base64.b64encode(f"{self.user}:{self.apikey}".encode()).decode()
-        offset = random.randint(0, self.MAX_OFFSET)
+        after = random.randint(self.START, int(time.time()) - self.WINDOW)
+        iso = lambda t: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(t))  # noqa: E731
+        with self.lock:
+            self.last_call = time.time()
         raw = http(
             self.API,
-            {"query": self.QUERY, "variables": {"limit": self.BATCH, "offset": offset}},
+            {"query": self.QUERY, "variables": {"after": iso(after), "before": iso(after + self.WINDOW), "free": free}},
             headers={"Authorization": f"Basic {auth}"},
         )
         data = json.loads(raw)
         if data.get("errors"):
             raise RuntimeError(data["errors"][0].get("message", "Cults-API-Fehler"))
-        items = data.get("data", {}).get("creations") or []
+        items = ((data.get("data") or {}).get("creationsBatch") or {}).get("results") or []
         batch = [
             {
                 "id": c["url"].rstrip("/").rsplit("/", 1)[-1],
@@ -312,27 +354,43 @@ class Cults(Source):
                 "image": c.get("illustrationImageUrl"),
                 "creator": (c.get("creator") or {}).get("nick"),
                 "url": c["url"],
+                "_nsfw": not c.get("safe", True),
+                "_paid": bool((c.get("price") or {}).get("cents")),
             }
             for c in items
             if c.get("url")
         ]
-        if not batch:
-            raise RuntimeError("Cults lieferte keine Modelle")
         with self.lock:
-            self.pool = (self.pool + batch)[-self.POOL_MAX :]
-            self.filled = time.time()
+            pool = self.pools[free]
+            pool.extend(batch)
+            del pool[: max(0, len(pool) - self.POOL_MAX)]
+        return len(batch)
 
-    def random(self):
+    def candidates(self, free, safe):
         with self.lock:
-            need = not self.pool or time.time() - self.filled > self.REFILL_EVERY
-        if need:
+            return [m for m in self.pools[free] if passes(m, free, safe)]
+
+    def random(self, free=False, safe=True):
+        cands = self.candidates(free, safe)
+        with self.lock:
+            due = time.time() - self.last_call > self.MIN_INTERVAL
+        # Auffüllen, wenn der Vorrat leer ist oder der Abstand zum letzten Aufruf es erlaubt.
+        # Ein leeres Zeitfenster (frühe Jahre) wird bis zu dreimal neu gewürfelt.
+        tries = 3 if not cands else (1 if due else 0)
+        for _ in range(tries):
             try:
-                self.fill()
-            except Exception:
-                if not self.pool:
-                    raise
-        with self.lock:
-            return dict(random.choice(self.pool))
+                self.fill(free)
+            except Exception as exc:
+                if cands:
+                    log.warning("cults: Auffüllen fehlgeschlagen: %s", exc)
+                    break
+                raise
+            cands = self.candidates(free, safe)
+            if cands:
+                break
+        if not cands:
+            raise RuntimeError("Kein passendes Modell im Vorrat")
+        return dict(random.choice(cands))
 
 
 SOURCES = OrderedDict((s.key, s) for s in (MakerWorld(), Printables(), Cults(), Thingiverse()))
@@ -367,7 +425,7 @@ LIMITER = RateLimiter(RATE_PER_MINUTE)
 
 SECURITY_HEADERS = {
     "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; "
-    "img-src https:; connect-src 'self'; base-uri 'none'; "
+    "img-src 'self' https:; connect-src 'self'; manifest-src 'self'; base-uri 'none'; "
     "form-action 'none'; frame-ancestors 'none'",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
@@ -430,8 +488,10 @@ class Handler(BaseHTTPRequestHandler):
             if not LIMITER.allow(self.client()):
                 self._json(429, {"error": "Zu viele Würfe, bitte kurz warten"}, extra={"Retry-After": "60"})
                 return
+            free = (params.get("free") or ["0"])[0] == "1"
+            safe = (params.get("nsfw") or ["0"])[0] != "1"
             try:
-                model = clean_model(src.random())
+                model = clean_model(src.random(free=free, safe=safe))
                 model.update({"source": src.key, "sourceName": src.name, "color": src.color})
                 self._json(200, model)
             except Exception as exc:
@@ -454,7 +514,10 @@ class Handler(BaseHTTPRequestHandler):
         if ctype.startswith("text/") or ctype in ("application/javascript", "text/javascript"):
             ctype += "; charset=utf-8"
         with open(file, "rb") as fh:
-            self._send(200, fh.read(), ctype, "public, max-age=300")
+            body = fh.read()
+        if file.endswith(".html"):
+            body = body.replace(b"__PUBLIC_URL__", PUBLIC_URL.encode())
+        self._send(200, body, ctype, "public, max-age=300")
 
 
 if __name__ == "__main__":
@@ -462,6 +525,7 @@ if __name__ == "__main__":
         print(__version__)
         raise SystemExit(0)
     mimetypes.add_type("application/javascript", ".js")
+    mimetypes.add_type("image/svg+xml", ".svg")
     active = ", ".join(s.name for s in SOURCES.values() if s.enabled)
     log.info("Print Roulette läuft auf Port %s; aktive Quellen: %s", PORT, active)
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

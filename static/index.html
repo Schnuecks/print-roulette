@@ -5,13 +5,50 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <title>Print Roulette</title>
+<meta name="description" content="Dreh am Rad und entdeck ein zufälliges 3D-Druckmodell von MakerWorld, Printables, Cults3D oder Thingiverse.">
+<meta name="theme-color" content="#111113">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Print Roulette">
+<meta property="og:description" content="Dreh am Rad und entdeck ein zufälliges 3D-Druckmodell von MakerWorld, Printables, Cults3D oder Thingiverse.">
+<meta property="og:url" content="__PUBLIC_URL__/">
+<meta property="og:image" content="__PUBLIC_URL__/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <main>
   <h1>Print Roulette</h1>
-  <div class="card" id="card"><small>Wähl eine Plattform und lass dich überraschen.</small></div>
-  <div class="buttons" id="buttons"></div>
+
+  <div class="wheel-wrap" id="wheel-wrap">
+    <svg class="wheel" id="wheel-svg" viewBox="0 0 300 300" role="img" aria-labelledby="wheel-title">
+      <title id="wheel-title">Rad mit den Plattformen</title>
+      <g id="wheel"></g>
+      <path class="pointer" d="M150 22 L139 2 L161 2 Z"/>
+    </svg>
+    <button class="hub" id="spin" type="button" aria-label="Rad drehen und zufällige Plattform wählen">Drehen</button>
+  </div>
+
+  <div class="direct" id="buttons" aria-label="Plattform direkt wählen"></div>
+
+  <div class="filters">
+    <label><input type="checkbox" id="f-free"> Nur kostenlose Modelle</label>
+    <label><input type="checkbox" id="f-safe" checked> NSFW ausblenden</label>
+  </div>
+
+  <div class="card" id="card" aria-live="polite"><small>Dreh am Rad oder wähl eine Plattform.</small></div>
+  <p class="hint">Leertaste: noch mal würfeln</p>
+
+  <section class="history" id="history-box" hidden>
+    <div class="history-head">
+      <h2>Zuletzt gewürfelt</h2>
+      <button type="button" class="ghost" id="history-clear">Verlauf leeren</button>
+    </div>
+    <div class="history-list" id="history"></div>
+  </section>
+
   <footer>Unabhängiges Hobbyprojekt. Modelle und Bilder gehören den jeweiligen Plattformen und Erstellern.</footer>
 </main>
 <script src="/app.js" defer></script>

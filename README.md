@@ -1,6 +1,6 @@
 # Print Roulette
 
-Kleine Webseite: ein Button je Plattform, ein Klick liefert ein zufälliges 3D-Modell mit Link.
+Kleine Webseite mit Glücksrad: Dreh am Rad oder wähl eine Plattform direkt und bekomm ein zufälliges 3D-Modell mit Link.
 
 Quellen: MakerWorld, Printables, Cults3D, Thingiverse. Keine Datenbank, kein Login, nichts wird gespeichert.
 
@@ -15,9 +15,16 @@ Quellen: MakerWorld, Printables, Cults3D, Thingiverse. Keine Datenbank, kein Log
 
 Jede Variable kann auch als `NAME_FILE` auf eine Datei zeigen (Docker-Secrets). Fehlt der Zugang, ist der Button ausgegraut.
 
+## Bedienung
+
+- **Rad drehen:** wählt zufällig eine Plattform und dann ein Modell. Ein Klick auf ein Segment oder einen Plattform-Button würfelt gezielt dort.
+- **Leertaste:** würfelt noch mal wie zuletzt.
+- **Filter:** „Nur kostenlose Modelle“ und „NSFW ausblenden“ (Standard an). Printables, Cults3D und Thingiverse liefern die nötigen Angaben, MakerWorld nicht; dort weist die Karte darauf hin.
+- **Verlauf:** die letzten zwölf Würfe, nur im eigenen Browser gespeichert.
+
 ## Starten
 
-Fertiges Image: `ghcr.io/schnuecks/print-roulette` (Tags `0.1.0`, `0.1`, `latest`). Oder selbst bauen:
+Fertiges Image: `ghcr.io/schnuecks/print-roulette` (Tags je Version, z. B. `0.2.0` und `0.2`, sowie `latest`). Oder selbst bauen:
 
 ```bash
 docker compose up -d --build
@@ -25,7 +32,7 @@ docker compose up -d --build
 
 Danach auf http://localhost:8080. Ohne Docker: `python app.py`.
 
-Weitere Einstellungen: `MW_LANG` (Sprache der MakerWorld-Links, Standard `en`), `USER_AGENT`, `CULTS_MAX_OFFSET`.
+Weitere Einstellungen: `MW_LANG` (Sprache der MakerWorld-Links, Standard `en`), `PUBLIC_URL` (für das Vorschaubild geteilter Links, Standard `https://roulette.hessis.eu`), `USER_AGENT`.
 
 ## Sicherheit
 
