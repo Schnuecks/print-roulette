@@ -24,6 +24,7 @@ let segments = [];  // nur aktive Quellen, in Rad-Reihenfolge
 let rotation = 0;   // aktuelle Drehung des Rads in Grad
 let busy = false;
 let lastMode = null; // 'wheel' oder Schlüssel einer Quelle
+let renderCard = () => card.replaceChildren(el('small', t('start'))); // zeichnet die Karte in der aktuellen Sprache neu
 
 /* ---------- Hilfen ---------- */
 
@@ -139,7 +140,11 @@ async function fetchModel(src) {
   if (!fSafe.checked) q.set('nsfw', '1');
   const r = await fetch('/api/random?' + q.toString());
   const m = await r.json();
-  if (!r.ok) throw new Error(m.error || r.statusText);
+  if (!r.ok) {
+    const err = new Error(m.error || r.statusText);
+    err.code = m.code;
+    throw err;
+  }
   return m;
 }
 
@@ -153,36 +158,64 @@ async function roll(mode) {
   setBusy(true);
   setAccent(src.color);
   card.classList.remove('hit');
-  card.replaceChildren(el('small', mode === 'wheel' ? 'Das Rad dreht sich…' : 'Würfle auf ' + src.name + '…'));
+  setCard(() => card.replaceChildren(el('small', mode === 'wheel' ? t('spinning') : t('rollingOn', { name: src.name }))));
   try {
     const [m] = await Promise.all([fetchModel(src), spinTo(src.key)]);
     show(m, src);
     remember(m);
   } catch (e) {
-    card.replaceChildren(el('small', e.message, { class: 'error' }));
+    showError(errorText(e, src));
   } finally {
     setBusy(false);
   }
 }
 
+function setCard(render) {
+  renderCard = render;
+  render();
+}
+
+// Fehlertext in der aktuellen Sprache; der Server liefert dafür einen Code
+function errorText(e, src) {
+  const name = src ? src.name : '';
+  switch (e.code) {
+    case 'unknown_source': return () => t('unknownSource');
+    case 'not_configured': return () => t('notConfigured', { name });
+    case 'rate_limit': return () => t('rateLimit');
+    case 'unavailable': return () => t('unavailable', { name });
+    default: return () => t('error', { msg: e.message });
+  }
+}
+
+function showError(text) {
+  setCard(() => card.replaceChildren(el('small', text(), { class: 'error' })));
+}
+
 function filterNote(src) {
-  const missing = [];
-  if (fFree.checked && !src.filters.free) missing.push('Preis');
-  if (fSafe.checked && !src.filters.nsfw) missing.push('NSFW');
-  return missing.length ? src.name + ' liefert keine Angaben zu ' + missing.join(' und ') + ', der Filter greift hier nicht.' : null;
+  const price = fFree.checked && !src.filters.free;
+  const nsfw = fSafe.checked && !src.filters.nsfw;
+  if (price && nsfw) return t('noFilterBoth', { name: src.name });
+  if (price) return t('noFilterPrice', { name: src.name });
+  if (nsfw) return t('noFilterNsfw', { name: src.name });
+  return null;
 }
 
 function show(m, src) {
+  setCard(() => renderResult(m, src));
+}
+
+function renderResult(m, src) {
   const url = safeUrl(m.url);
   if (!url) {
-    card.replaceChildren(el('small', 'Ungültiger Link', { class: 'error' }));
+    card.replaceChildren(el('small', t('invalidLink'), { class: 'error' }));
     return;
   }
+  const title = m.title || t('untitled');
   setAccent(m.color);
   const parts = [el('span', m.sourceName, { class: 'badge' })];
   const image = safeUrl(m.image);
   if (image) {
-    const img = el('img', null, { src: image, alt: m.title, referrerpolicy: 'no-referrer' });
+    const img = el('img', null, { src: image, alt: title, referrerpolicy: 'no-referrer' });
     let tries = 0;
     img.onerror = () => {
       // Cults und Thingiverse erzeugen Vorschaubilder erst beim ersten Abruf
@@ -191,12 +224,17 @@ function show(m, src) {
     };
     parts.push(img);
   }
-  parts.push(el('a', m.title, { class: 'title', href: url, target: '_blank', rel: 'noopener noreferrer' }));
-  parts.push(el('small', m.creator ? 'von ' + m.creator + ' · öffnet auf ' + m.sourceName : 'öffnet auf ' + m.sourceName));
+  parts.push(el('a', title, { class: 'title', href: url, target: '_blank', rel: 'noopener noreferrer' }));
+  const opens = t('opens', { source: m.sourceName });
+  parts.push(el('small', m.creator ? t('by', { creator: m.creator }) + ' · ' + opens : opens, { class: 'meta' }));
   const note = src ? filterNote(src) : null;
   if (note) parts.push(el('span', note, { class: 'note' }));
   card.replaceChildren(...parts);
   card.classList.add('hit');
+}
+
+function updateButtonTitles() {
+  buttons.querySelectorAll('button[data-off="1"]').forEach(b => { b.title = t('notConfigured', { name: b.textContent }); });
 }
 
 /* ---------- Verlauf ---------- */
@@ -232,7 +270,7 @@ function renderHistory() {
   const list = getHistory();
   historyBox.hidden = list.length === 0;
   historyList.replaceChildren(...list.map(h => {
-    const b = el('button', null, { type: 'button', class: 'tile', title: h.title + ' (' + h.sourceName + ')' });
+    const b = el('button', null, { type: 'button', class: 'tile', title: (h.title || t('untitled')) + ' (' + h.sourceName + ')' });
     b.style.setProperty('--c', h.color);
     if (h.image) {
       const img = el('img', null, { class: 'thumb', src: h.image, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' });
@@ -241,7 +279,7 @@ function renderHistory() {
     } else {
       b.appendChild(el('div', (h.sourceName || '?').charAt(0), { class: 'thumb' }));
     }
-    b.appendChild(el('span', h.title));
+    b.appendChild(el('span', h.title || t('untitled')));
     b.addEventListener('click', () => show(h, null));
     return b;
   }));
@@ -281,17 +319,33 @@ fetch('/api/sources').then(r => r.json()).then(list => {
     if (!src.enabled) {
       b.disabled = true;
       b.dataset.off = '1';
-      b.title = src.reason || 'Nicht verfügbar';
     }
     b.addEventListener('click', () => roll(src.key));
     buttons.appendChild(b);
   }
+  updateButtonTitles();
   if (!segments.length) {
     spinBtn.disabled = true;
-    card.replaceChildren(el('small', 'Keine Plattform verfügbar', { class: 'error' }));
+    showError(() => t('noPlatform'));
   }
 }).catch(e => {
-  card.replaceChildren(el('small', 'Fehler: ' + e.message, { class: 'error' }));
+  showError(() => t('error', { msg: e.message }));
 });
 
+/* ---------- Sprache ---------- */
+
+const langSelect = $('lang');
+for (const [code, name] of Object.entries(LANGUAGES)) {
+  langSelect.appendChild(el('option', name, { value: code, lang: code }));
+}
+langSelect.value = lang;
+langSelect.addEventListener('change', () => {
+  setLang(langSelect.value);
+  updateButtonTitles();
+  renderHistory();
+  renderCard();
+});
+
+applyStatic();
+renderCard();
 renderHistory();

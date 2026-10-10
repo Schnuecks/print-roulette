@@ -26,9 +26,10 @@ Security problems go to **Security → Report a vulnerability** instead, see
    `CULTS_API_KEY` and `THINGIVERSE_TOKEN` to test the others.
 3. Keep it small and friendly to the platforms: no extra dependencies, no tracking, no
    storage on the server, and no more requests to the platforms than necessary.
-4. Nothing from third parties in the page: scripts, styles and fonts are served locally,
+4. New texts on the page go into `static/i18n.js`, in all six languages.
+5. Nothing from third parties in the page: scripts, styles and fonts are served locally,
    and the Content Security Policy stays free of inline code.
-5. Update README.md and README.de.md if needed and add a line under "Unveröffentlicht" in
+6. Update README.md and README.de.md if needed and add a line under "Unveröffentlicht" in
    `CHANGELOG.md` if users will notice the change.
 
 The pull request template has a short checklist for this.
@@ -40,6 +41,7 @@ The pull request template has a short checklist for this.
 | `app.py` | Web server, the four platform sources, filters, rate limit and security headers |
 | `static/index.html` | Page skeleton |
 | `static/app.js` | Wheel, rolling, filters, history and keyboard |
+| `static/i18n.js` | Texts in all six languages and the language choice |
 | `static/style.css` | Design, light and dark mode |
 | `static/fonts/` | Playfair Display and Manrope (SIL Open Font License) |
 | `static/logo.svg`, `og.png`, `apple-touch-icon.png` | Logo, link preview and app icon |

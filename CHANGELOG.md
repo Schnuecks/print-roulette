@@ -2,8 +2,11 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
-## Unveröffentlicht
+## 0.3.1
 
+- Die Seite gibt es in sechs Sprachen: Deutsch, Englisch, Französisch, Spanisch, Italienisch und Niederländisch. Vorgabe ist die Browsersprache, sonst Englisch; die Wahl oben rechts merkt sich der Browser.
+- Fehlermeldungen kommen vom Server als Code und erscheinen in der gewählten Sprache.
+- Saubere Zeilenumbrüche in Titel, Hinweisen und Footer, keine einzelnen Wörter mehr allein in der letzten Zeile.
 - Statische Dateien werden nur noch mit fest hinterlegten Dateitypen ausgeliefert, unbekannte Endungen ergeben 404 (Hinweis aus CodeQL).
 
 ## 0.3.0

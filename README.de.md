@@ -32,6 +32,8 @@ dessen Seite. Für die Abende, an denen du etwas drucken willst, aber nicht wei�
 - **Filter** für nur kostenlose Modelle und zum Ausblenden von NSFW-Inhalten (standardmäßig an)
 - **Verlauf** der letzten zwölf Würfe, nur im eigenen Browser gespeichert
 - **Tastatur:** die Leertaste würfelt noch mal wie zuletzt
+- **Sechs Sprachen:** Deutsch, Englisch, Französisch, Spanisch, Italienisch und Niederländisch;
+  vorgegeben ist die Browsersprache, die Wahl merkt sich der Browser
 - **Keine Datenbank, kein Login, kein Tracking:** auf dem Server wird nichts gespeichert
 - **Hell und dunkel,** funktioniert auf dem Handy, beachtet „Bewegung reduzieren“
 - **Kleiner Container:** nur Standardbibliothek, läuft ohne Root mit schreibgeschütztem

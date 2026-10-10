@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -22,6 +22,13 @@
 </head>
 <body>
 <main>
+  <div class="topbar">
+    <label class="lang-select">
+      <span class="sr-only" data-i18n="language">Language</span>
+      <select id="lang"></select>
+    </label>
+  </div>
+
   <header class="brand">
     <img src="/logo.svg" alt="" width="48" height="48">
     <h1>Print <span>Roulette</span></h1>
@@ -29,36 +36,37 @@
 
   <div class="wheel-wrap" id="wheel-wrap">
     <svg class="wheel" id="wheel-svg" viewBox="0 0 300 300" role="img" aria-labelledby="wheel-title">
-      <title id="wheel-title">Rad mit den Plattformen</title>
+      <title id="wheel-title" data-i18n="wheelTitle">Wheel with the platforms</title>
       <g id="wheel"></g>
       <path class="pointer" d="M150 22 L139 2 L161 2 Z"/>
     </svg>
-    <button class="hub" id="spin" type="button" aria-label="Rad drehen und zufällige Plattform wählen">Drehen</button>
+    <button class="hub" id="spin" type="button" data-i18n="spin" data-i18n-aria-label="spinAria">Spin</button>
   </div>
 
-  <div class="direct" id="buttons" aria-label="Plattform direkt wählen"></div>
+  <div class="direct" id="buttons" data-i18n-aria-label="directAria"></div>
 
   <div class="filters">
-    <label><input type="checkbox" id="f-free"> Nur kostenlose Modelle</label>
-    <label><input type="checkbox" id="f-safe" checked> NSFW ausblenden</label>
+    <label><input type="checkbox" id="f-free"> <span data-i18n="free">Free models only</span></label>
+    <label><input type="checkbox" id="f-safe" checked> <span data-i18n="safe">Hide NSFW</span></label>
   </div>
 
-  <div class="card" id="card" aria-live="polite"><small>Dreh am Rad oder wähl eine Plattform.</small></div>
-  <p class="hint">Leertaste: noch mal würfeln</p>
+  <div class="card" id="card" aria-live="polite"><small data-i18n="start">Spin the wheel or pick a platform.</small></div>
+  <p class="hint" data-i18n="hint">Space bar: roll again</p>
 
   <section class="history" id="history-box" hidden>
     <div class="history-head">
-      <h2>Zuletzt gewürfelt</h2>
-      <button type="button" class="ghost" id="history-clear">Verlauf leeren</button>
+      <h2 data-i18n="historyTitle">Recently rolled</h2>
+      <button type="button" class="ghost" id="history-clear" data-i18n="historyClear">Clear history</button>
     </div>
     <div class="history-list" id="history"></div>
   </section>
 
   <footer>
-    Unabhängiges Hobbyprojekt. Modelle und Bilder gehören den jeweiligen Plattformen und Erstellern.
-    <!--source--><br><a href="__SOURCE_URL__" rel="noopener noreferrer">Quellcode auf GitHub</a> · AGPL-3.0<!--/source-->
+    <p><span data-i18n="footer1">Independent hobby project.</span> <span data-i18n="footer2">Models and images belong to their platforms and creators.</span></p>
+    <!--source--><p><a href="__SOURCE_URL__" rel="noopener noreferrer" data-i18n="source">Source code on GitHub</a> · AGPL-3.0</p><!--/source-->
   </footer>
 </main>
+<script src="/i18n.js" defer></script>
 <script src="/app.js" defer></script>
 </body>
 </html>

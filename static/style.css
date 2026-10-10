@@ -91,3 +91,20 @@ footer a:hover { color:var(--fg); }
 @media (hover: none) {
   .hint { display:none; }
 }
+
+/* Sprachauswahl */
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+.topbar { display:flex; justify-content:flex-end; margin:-8px 0 4px; }
+.lang-select select { appearance:none; -webkit-appearance:none; font:inherit; font-size:.8rem; font-weight:600; color:var(--muted);
+  background:transparent; border:1px solid var(--border); border-radius:999px; padding:5px 28px 5px 12px; cursor:pointer;
+  background-image:linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:calc(100% - 15px) 52%, calc(100% - 10px) 52%; background-size:5px 5px; background-repeat:no-repeat; }
+.lang-select select:hover { color:var(--fg); border-color:var(--gold); }
+.lang-select select option { color:#18181b; background:#fff; }
+
+/* Saubere Umbrüche: keine einzelnen Wörter allein in der letzten Zeile */
+h1, .card a.title, .card small, .card .note, .hint, footer p, .filters label { text-wrap:balance; }
+.card a.title, .card small, .card .note { max-width:42ch; }
+footer { max-width:46ch; margin-left:auto; margin-right:auto; }
+footer p { margin:0 0 4px; }
+.filters label { white-space:nowrap; }

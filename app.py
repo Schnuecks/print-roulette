@@ -15,7 +15,7 @@ import urllib.request
 from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 PORT = int(os.environ.get("PORT", "8080"))
 UA = os.environ.get("USER_AGENT", f"PrintRoulette/{__version__} (+https://roulette.hessis.eu)")
@@ -71,7 +71,7 @@ def clean_model(model):
     url = safe_url(model.get("url"))
     if not url:
         raise RuntimeError("Modell-Link zeigt auf unerwarteten Host")
-    title = re.sub(r"\s+", " ", str(model.get("title") or "")).strip()[:200] or "Ohne Titel"
+    title = re.sub(r"\s+", " ", str(model.get("title") or "")).strip()[:200] or ""
     creator = model.get("creator")
     creator = re.sub(r"\s+", " ", str(creator)).strip()[:80] if creator else None
     return {
@@ -498,14 +498,15 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/random":
             params = urllib.parse.parse_qs(query, max_num_fields=5)
             src = SOURCES.get((params.get("source") or ["makerworld"])[0])
+            # Fehler tragen einen Code, den die Seite in die gewählte Sprache übersetzt
             if not src:
-                self._json(404, {"error": "Unbekannte Quelle"})
+                self._json(404, {"code": "unknown_source", "error": "Unknown platform"})
                 return
             if not src.enabled:
-                self._json(503, {"error": src.reason})
+                self._json(503, {"code": "not_configured", "error": src.reason})
                 return
             if not LIMITER.allow(self.client()):
-                self._json(429, {"error": "Zu viele Würfe, bitte kurz warten"}, extra={"Retry-After": "60"})
+                self._json(429, {"code": "rate_limit", "error": "Too many rolls"}, extra={"Retry-After": "60"})
                 return
             free = (params.get("free") or ["0"])[0] == "1"
             safe = (params.get("nsfw") or ["0"])[0] != "1"
@@ -515,7 +516,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, model)
             except Exception as exc:
                 log.warning("%s: %s", src.key, exc)
-                self._json(502, {"error": f"{src.name} antwortet gerade nicht, bitte noch einmal versuchen"})
+                self._json(502, {"code": "unavailable", "error": f"{src.name} is not responding"})
             return
         if path == "/healthz":
             self._send(200, b"ok", "text/plain")

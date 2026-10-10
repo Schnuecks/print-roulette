@@ -32,6 +32,8 @@ for the evenings when you want to print something but don't know what.
 - **Filters** for free models only and for hiding NSFW content (on by default)
 - **History** of the last twelve rolls, stored only in your own browser
 - **Keyboard:** the space bar rolls again the same way as last time
+- **Six languages:** English, German, French, Spanish, Italian and Dutch; the browser language is
+  used by default, the choice is remembered
 - **No database, no login, no tracking:** nothing is stored on the server
 - **Light and dark mode**, works on phones, respects “reduce motion”
 - **Small container:** standard library only, runs as a non-root user with a read-only file
