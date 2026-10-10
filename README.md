@@ -93,6 +93,11 @@ needed).
 - **Thingiverse:** create an app at [thingiverse.com/developers](https://www.thingiverse.com/developers)
   (type “Web App”) and use its *App Token*.
 
+**Behind a reverse proxy with custom error pages** (e.g. a Traefik `errors` middleware), leave
+`/api/` out of them. The page reads the JSON error responses of the API to show messages in
+the chosen language. With Traefik, add a second router for `PathPrefix(`/api/`)` without the
+error middleware.
+
 Docker secrets are mounted with the permissions of the file on the host. If the container
 cannot read them, run it with your user (`user: "1000:1000"`) or make the files readable.
 

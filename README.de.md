@@ -94,6 +94,11 @@ nötig).
 - **Thingiverse:** unter [thingiverse.com/developers](https://www.thingiverse.com/developers)
   eine App vom Typ „Web App“ anlegen und deren *App Token* verwenden.
 
+**Hinter einem Reverse Proxy mit eigenen Fehlerseiten** (z. B. einer Traefik-Middleware
+`errors`) nimm `/api/` davon aus. Die Seite liest die JSON-Fehlerantworten der API, um
+Meldungen in der gewählten Sprache anzuzeigen. Bei Traefik geht das mit einem zweiten Router
+für `PathPrefix(`/api/`)` ohne die Fehler-Middleware.
+
 Docker-Secrets werden mit den Rechten der Datei auf dem Host eingebunden. Kann der Container
 sie nicht lesen, starte ihn mit deinem Benutzer (`user: "1000:1000"`) oder mach die Dateien
 lesbar.
