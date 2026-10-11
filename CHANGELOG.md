@@ -2,7 +2,7 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
-## Unveröffentlicht
+## 0.4.0
 
 - Docker-Image auch für arm64 (z. B. Raspberry Pi).
 - `PUBLIC_URL` ist jetzt optional: Ohne Angabe nimmt die App die Adresse aus der Anfrage (`Host`, hinter einem Proxy `X-Forwarded-Host`/`-Proto`). Vorher zeigte das Vorschaubild ohne `PUBLIC_URL` auf roulette.hessis.eu. Nur einfache Hostnamen werden übernommen.
