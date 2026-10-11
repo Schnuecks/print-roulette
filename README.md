@@ -64,7 +64,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      PUBLIC_URL: https://roulette.example.com
+      # PUBLIC_URL: https://roulette.example.com   # optional, otherwise taken from the request
       CULTS_USER: your-cults-nickname
       CULTS_API_KEY_FILE: /run/secrets/cults_api_key
       THINGIVERSE_TOKEN_FILE: /run/secrets/thingiverse_token
