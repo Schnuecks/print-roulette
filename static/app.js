@@ -19,14 +19,14 @@ const HISTORY_MAX = 12;
 const SPIN_MS = 3200;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-let sources = [];   // alle Quellen vom Server
-let segments = [];  // nur aktive Quellen, in Rad-Reihenfolge
-let rotation = 0;   // aktuelle Drehung des Rads in Grad
+let sources = [];   // all sources from the server
+let segments = [];  // active sources only, in wheel order
+let rotation = 0;   // current rotation of the wheel in degrees
 let busy = false;
-let lastMode = null; // 'wheel' oder Schlüssel einer Quelle
-let renderCard = () => card.replaceChildren(el('small', t('start'))); // zeichnet die Karte in der aktuellen Sprache neu
+let lastMode = null; // 'wheel' or the key of a source
+let renderCard = () => card.replaceChildren(el('small', t('start'))); // redraws the card in the current language
 
-/* ---------- Hilfen ---------- */
+/* ---------- Helpers ---------- */
 
 function el(tag, text, attrs) {
   const n = document.createElement(tag);
@@ -49,7 +49,7 @@ function safeUrl(u) {
 }
 
 function store(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* privat oder voll: egal */ }
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* private mode or full: not important */ }
 }
 
 function load(key, fallback) {
@@ -71,7 +71,7 @@ function setBusy(state) {
   buttons.querySelectorAll('button').forEach(b => { b.disabled = state || b.dataset.off === '1'; });
 }
 
-/* ---------- Rad ---------- */
+/* ---------- Wheel ---------- */
 
 function polar(angle, r) {
   const rad = (angle - 90) * Math.PI / 180;
@@ -110,14 +110,14 @@ function buildWheel() {
     label.setAttribute('y', ty);
     label.setAttribute('text-anchor', 'middle');
     label.setAttribute('dominant-baseline', 'middle');
-    // Oberkante zeigt nach außen: das Segment unter dem Zeiger steht nach dem Drehen aufrecht
+    // Top edge points outwards: the segment under the pointer is upright after the spin
     label.setAttribute('transform', `rotate(${mid} ${tx} ${ty})`);
     label.textContent = src.name;
     wheel.appendChild(label);
   });
 }
 
-// Dreht das Rad so, dass das Segment der Quelle unter dem Zeiger oben landet.
+// Spins the wheel so that the segment of the source ends up under the pointer at the top.
 function spinTo(key) {
   const i = segments.findIndex(s => s.key === key);
   if (i < 0) return Promise.resolve();
@@ -132,7 +132,7 @@ function spinTo(key) {
   return new Promise(res => setTimeout(res, SPIN_MS));
 }
 
-/* ---------- Würfeln ---------- */
+/* ---------- Rolling ---------- */
 
 async function fetchModel(src) {
   const q = new URLSearchParams({ source: src.key });
@@ -175,7 +175,7 @@ function setCard(render) {
   render();
 }
 
-// Fehlertext in der aktuellen Sprache; der Server liefert dafür einen Code
+// Error text in the current language; the server sends a code for it
 function errorText(e, src) {
   const name = src ? src.name : '';
   switch (e.code) {
@@ -218,7 +218,7 @@ function renderResult(m, src) {
     const img = el('img', null, { src: image, alt: title, referrerpolicy: 'no-referrer' });
     let tries = 0;
     img.onerror = () => {
-      // Cults und Thingiverse erzeugen Vorschaubilder erst beim ersten Abruf
+      // Cults and Thingiverse create preview images only on the first request
       if (++tries > 3) { img.remove(); return; }
       setTimeout(() => { img.src = image + '#' + tries; }, 3000 * tries);
     };
@@ -237,7 +237,7 @@ function updateButtonTitles() {
   buttons.querySelectorAll('button[data-off="1"]').forEach(b => { b.title = t('notConfigured', { name: b.textContent }); });
 }
 
-/* ---------- Verlauf ---------- */
+/* ---------- History ---------- */
 
 function cleanEntry(m) {
   const url = safeUrl(m && m.url);
@@ -290,7 +290,7 @@ $('history-clear').addEventListener('click', () => {
   renderHistory();
 });
 
-/* ---------- Filter und Tastatur ---------- */
+/* ---------- Filters and keyboard ---------- */
 
 const savedFilters = load(FILTER_KEY, {});
 if (typeof savedFilters.free === 'boolean') fFree.checked = savedFilters.free;
@@ -332,7 +332,7 @@ fetch('/api/sources').then(r => r.json()).then(list => {
   showError(() => t('error', { msg: e.message }));
 });
 
-/* ---------- Sprache ---------- */
+/* ---------- Language ---------- */
 
 const langSelect = $('lang');
 for (const [code, name] of Object.entries(LANGUAGES)) {

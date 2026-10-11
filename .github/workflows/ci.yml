@@ -1,7 +1,7 @@
 name: CI
 
-# Pull requests run lint (incl. security rules), a smoke test of the server and the Docker image
-# for all platforms. A push to main is the squash of a checked pull request, so only the
+# Pull requests run lint (incl. security rules), the unit tests, a smoke test of the server and the
+# Docker image for all platforms. A push to main is the squash of a checked pull request, so only the
 # tests run there. The image is uploaded to ghcr.io only for a version tag (v1.2.3).
 
 on:
@@ -14,8 +14,8 @@ permissions:
   contents: read
 
 env:
-  # Only amd64 for now; arm64 would need QEMU (helper image from Docker Hub) or an arm64 runner.
-  PLATFORMS: linux/amd64
+  # arm64 (e.g. Raspberry Pi) is built with QEMU; its helper image comes from Google's Docker Hub mirror.
+  PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
   test:
@@ -28,6 +28,7 @@ jobs:
       - run: pip install ruff
       - run: ruff check .
       - run: ruff format --check .
+      - run: python -m unittest -v
       - name: Smoke test
         run: |
           PORT=8099 python app.py &
@@ -55,8 +56,12 @@ jobs:
             echo "Tag $GITHUB_REF_NAME does not match __version__ $version" >&2
             exit 1
           fi
-      # BuildKit and the base image come from Google's Docker Hub mirror, which has no
+      # QEMU, BuildKit and the base image come from Google's Docker Hub mirror, which has no
       # anonymous pull limit; the finished image is published to ghcr.io.
+      - uses: docker/setup-qemu-action@v4
+        with:
+          image: mirror.gcr.io/tonistiigi/binfmt:latest
+          platforms: arm64
       - uses: docker/setup-buildx-action@v4
         with:
           driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1

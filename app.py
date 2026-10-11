@@ -1,4 +1,4 @@
-"""Print Roulette: zufällige 3D-Modelle von MakerWorld, Printables, Cults3D und Thingiverse."""
+"""Print Roulette: random 3D models from MakerWorld, Printables, Cults3D and Thingiverse."""
 
 import base64
 import json
@@ -18,20 +18,24 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 __version__ = "0.3.1"
 
 PORT = int(os.environ.get("PORT", "8080"))
-UA = os.environ.get("USER_AGENT", f"PrintRoulette/{__version__} (+https://roulette.hessis.eu)")
 STATIC_DIR = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "static"))
 DAY = 24 * 3600
-MAX_BODY = 8 * 1024 * 1024  # größte erwartete Antwort (Sitemap-Seite ≈ 1,3 MB)
-RATE_PER_MINUTE = int(os.environ.get("RATE_PER_MINUTE", "30"))  # Würfe pro IP und Minute
-TRUST_PROXY = os.environ.get("TRUST_PROXY", "1") == "1"  # X-Forwarded-For von Traefik
-PUBLIC_URL = os.environ.get("PUBLIC_URL", "https://roulette.hessis.eu").rstrip("/")  # für Vorschau-Links
-# Link auf den Quellcode im Footer (AGPL); leer lassen blendet ihn aus
+MAX_BODY = 8 * 1024 * 1024  # largest expected response (a sitemap page is about 1.3 MB)
+RATE_PER_MINUTE = int(os.environ.get("RATE_PER_MINUTE", "30"))  # rolls per IP and minute
+TRUST_PROXY = os.environ.get("TRUST_PROXY", "1") == "1"  # use X-Forwarded-* from the reverse proxy
+# Public address for link previews; empty means: derive it from the request (Host header)
+PUBLIC_URL = os.environ.get("PUBLIC_URL", "").strip().rstrip("/")
+# Link to the source code in the footer (AGPL); empty hides it
 SOURCE_URL = os.environ.get("SOURCE_URL", "https://github.com/Schnuecks/print-roulette").strip()
+# Honest user agent: points to this instance if PUBLIC_URL is set, otherwise to the project
+UA = os.environ.get(
+    "USER_AGENT", f"PrintRoulette/{__version__} (+{PUBLIC_URL or 'https://github.com/Schnuecks/print-roulette'})"
+)
 
 log = logging.getLogger("roulette")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-# Nur zu diesen Hosts dürfen Links und Bilder zeigen, die an den Browser gehen
+# Links and images sent to the browser may only point to these hosts
 ALLOWED_HOSTS = {
     "makerworld.com",
     "www.printables.com",
@@ -46,7 +50,7 @@ ALLOWED_HOSTS = {
 
 
 def safe_url(url):
-    """Gibt die URL zurück, wenn sie https ist und auf einen bekannten Host zeigt, sonst None."""
+    """Return the URL if it uses https and points to a known host, otherwise None."""
     if not url or not isinstance(url, str) or len(url) > 2000:
         return None
     try:
@@ -59,7 +63,7 @@ def safe_url(url):
 
 
 def safe_source_url():
-    """Nur https-Links in den Footer, sonst ausblenden."""
+    """Only https links go into the footer; anything else hides the link."""
     parts = urllib.parse.urlsplit(SOURCE_URL) if SOURCE_URL else None
     if not parts or parts.scheme != "https" or not parts.hostname or '"' in SOURCE_URL or "<" in SOURCE_URL:
         return ""
@@ -67,10 +71,10 @@ def safe_source_url():
 
 
 def clean_model(model):
-    """Vereinheitlicht und prüft, was an den Browser geht."""
+    """Normalise and check what is sent to the browser."""
     url = safe_url(model.get("url"))
     if not url:
-        raise RuntimeError("Modell-Link zeigt auf unerwarteten Host")
+        raise RuntimeError("Model link points to an unexpected host")
     title = re.sub(r"\s+", " ", str(model.get("title") or "")).strip()[:200] or ""
     creator = model.get("creator")
     creator = re.sub(r"\s+", " ", str(creator)).strip()[:80] if creator else None
@@ -83,8 +87,26 @@ def clean_model(model):
     }
 
 
+HOST_RE = re.compile(r"^[A-Za-z0-9.-]{1,253}(:[0-9]{1,5})?$")
+
+
+def derive_public_url(forwarded_host, forwarded_proto, host):
+    """Build the public base URL from request headers; only plain host names are accepted.
+
+    Falls back to a relative URL ("") if nothing usable is sent, so a forged Host header can
+    never put foreign markup into the page."""
+    candidate = (forwarded_host or host or "").split(",")[0].strip()
+    if not HOST_RE.match(candidate):
+        return ""
+    # The app itself speaks plain HTTP; behind a proxy X-Forwarded-Proto tells the real scheme
+    proto = (forwarded_proto or "").split(",")[0].strip().lower()
+    if proto not in ("http", "https"):
+        proto = "http"
+    return f"{proto}://{candidate}"
+
+
 def secret(name):
-    """Liest NAME oder die Datei aus NAME_FILE."""
+    """Read NAME, or the file named in NAME_FILE."""
     path = os.environ.get(name + "_FILE")
     if path and os.path.isfile(path):
         with open(path, encoding="utf-8") as fh:
@@ -100,12 +122,12 @@ def http(url, data=None, headers=None, timeout=20):
         body = json.dumps(data).encode()
         hdrs["Content-Type"] = "application/json"
     if not url.startswith("https://"):
-        raise ValueError("Nur https erlaubt")
-    req = urllib.request.Request(url, data=body, headers=hdrs)  # noqa: S310 - feste https-Hosts
+        raise ValueError("Only https is allowed")
+    req = urllib.request.Request(url, data=body, headers=hdrs)  # noqa: S310 - fixed https hosts
     with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
         raw = resp.read(MAX_BODY + 1)
     if len(raw) > MAX_BODY:
-        raise RuntimeError(f"Antwort von {urllib.parse.urlsplit(url).hostname} zu groß")
+        raise RuntimeError(f"Response from {urllib.parse.urlsplit(url).hostname} is too large")
     return raw.decode("utf-8", "replace")
 
 
@@ -119,7 +141,7 @@ class Source:
     color = ""
     enabled = True
     reason = ""
-    # Welche Filter die Quelle prüfen kann
+    # Which filters the source can check
     can_free = False
     can_nsfw = False
 
@@ -138,7 +160,7 @@ class Source:
 
 
 def passes(model, free, safe):
-    """Prüft die Filter anhand der internen Felder _paid und _nsfw."""
+    """Apply the filters using the internal fields _paid and _nsfw."""
     if free and model.get("_paid"):
         return False
     return not (safe and model.get("_nsfw"))
@@ -165,7 +187,7 @@ class MakerWorld(Source):
                 return self.pages
         pages = [u for u in self.LOC_RE.findall(http(f"{self.BASE}/sitemaps/index.xml")) if "/sitemaps/models.xml" in u]
         if not pages:
-            raise RuntimeError("Sitemap-Index enthält keine Modellseiten")
+            raise RuntimeError("Sitemap index contains no model pages")
         with self.lock:
             self.pages, self.fetched = pages, time.time()
         return pages
@@ -183,7 +205,7 @@ class MakerWorld(Source):
         return models
 
     def random(self, free=False, safe=True):
-        # Die Sitemap kennt weder Preis noch NSFW-Kennzeichen, Filter greifen hier nicht
+        # The sitemap has neither price nor NSFW flags, so the filters cannot apply here
         pages = self.sitemap_pages()
         for _ in range(3):
             models = self.models_from_page(random.choice(pages))
@@ -196,14 +218,14 @@ class MakerWorld(Source):
                     "creator": None,
                     "url": f"{self.BASE}/{self.LANG}/models/{mid}-{slug}",
                 }
-        raise RuntimeError("Keine Modelle in den geladenen Sitemap-Seiten")
+        raise RuntimeError("No models in the loaded sitemap pages")
 
 
-# ------------------------------------------------- Zufalls-ID mit Obergrenze
+# --------------------------------------------- random ID below an upper bound
 
 
 class RandomIdSource(Source):
-    """Würfelt IDs bis zu einer Obergrenze, die täglich nach oben getastet wird."""
+    """Rolls IDs below an upper bound that is probed upwards once a day."""
 
     start_max = 1
     step = 1
@@ -215,12 +237,12 @@ class RandomIdSource(Source):
         self.probed = 0.0
 
     def exists(self, mid):
-        """Gibt das Modell-Dict zurück oder None, wenn es die ID nicht gibt."""
+        """Return the model dict, or None if the ID does not exist."""
         raise NotImplementedError
 
     def probe_max(self):
         hi = self.max_id
-        # nach oben tasten, solange Treffer kommen (max. 20 Schritte)
+        # probe upwards while there are hits (at most 20 steps)
         for _ in range(20):
             cand = hi + self.step
             found = any(self.exists(cand - random.randint(0, self.step // 10 or 1)) for _ in range(3))
@@ -231,7 +253,7 @@ class RandomIdSource(Source):
             self.max_id = max(self.max_id, hi)
 
     def probe_in_background(self):
-        """Tastet die Obergrenze höchstens einmal am Tag ab, ohne den Wurf aufzuhalten."""
+        """Probe the upper bound at most once a day, without delaying the roll."""
         with self.lock:
             if time.time() - self.probed < DAY:
                 return
@@ -241,7 +263,7 @@ class RandomIdSource(Source):
             try:
                 self.probe_max()
             except Exception as exc:
-                log.warning("%s: Obergrenze nicht geprüft: %s", self.key, exc)
+                log.warning("%s: upper bound not probed: %s", self.key, exc)
 
         threading.Thread(target=run, name=f"probe-{self.key}", daemon=True).start()
 
@@ -251,7 +273,7 @@ class RandomIdSource(Source):
             model = self.exists(random.randint(1, self.max_id))
             if model and passes(model, free, safe):
                 return model
-        raise RuntimeError("Nach mehreren Versuchen kein passendes Modell gefunden")
+        raise RuntimeError("No matching model found after several attempts")
 
 
 class Printables(RandomIdSource):
@@ -282,7 +304,7 @@ class Printables(RandomIdSource):
 
 class Thingiverse(RandomIdSource):
     key, name, color = "thingiverse", "Thingiverse", "#248BFB"
-    can_free = can_nsfw = True  # Thingiverse ist durchgehend kostenlos
+    can_free = can_nsfw = True  # everything on Thingiverse is free
     start_max, step = 7_000_000, 50_000
     API = "https://api.thingiverse.com"
 
@@ -290,7 +312,7 @@ class Thingiverse(RandomIdSource):
         super().__init__()
         self.token = secret("THINGIVERSE_TOKEN")
         if not self.token:
-            self.enabled, self.reason = False, "Kein API-Token (THINGIVERSE_TOKEN) hinterlegt"
+            self.enabled, self.reason = False, "No API token (THINGIVERSE_TOKEN) configured"
 
     def exists(self, mid):
         try:
@@ -317,7 +339,7 @@ class Thingiverse(RandomIdSource):
 
 
 class Cults(Source):
-    """Offizielle API. Würfelt ein zufälliges Wochenfenster seit 2014 und hält die Treffer vorrätig."""
+    """Official API. Rolls a random week since 2014 and keeps the results in a pool."""
 
     key, name, color = "cults", "Cults3D", "#822EF5"
     can_free = can_nsfw = True
@@ -328,17 +350,17 @@ class Cults(Source):
           name(locale: EN) url(locale: EN) illustrationImageUrl safe
           price(currency: EUR) { cents } creator { nick }
         } } }"""
-    START = 1388534400  # 2014-01-01, Start von Cults
+    START = 1388534400  # 2014-01-01, launch of Cults
     WINDOW = 7 * DAY
     POOL_MAX = 500
-    MIN_INTERVAL = 180  # Sekunden zwischen zwei API-Aufrufen, hält das Tageslimit (≈ 500) sicher ein
+    MIN_INTERVAL = 180  # seconds between two API calls, keeps well below the daily limit (about 500)
 
     def __init__(self):
         self.user, self.apikey = secret("CULTS_USER"), secret("CULTS_API_KEY")
         if not (self.user and self.apikey):
-            self.enabled, self.reason = False, "Kein API-Schlüssel (CULTS_USER / CULTS_API_KEY) hinterlegt"
+            self.enabled, self.reason = False, "No API key (CULTS_USER / CULTS_API_KEY) configured"
         self.lock = threading.Lock()
-        self.pools = {False: [], True: []}  # Schlüssel: nur kostenlos?
+        self.pools = {False: [], True: []}  # key: free models only?
         self.last_call = 0.0
 
     def fill(self, free):
@@ -354,7 +376,7 @@ class Cults(Source):
         )
         data = json.loads(raw)
         if data.get("errors"):
-            raise RuntimeError(data["errors"][0].get("message", "Cults-API-Fehler"))
+            raise RuntimeError(data["errors"][0].get("message", "Cults API error"))
         items = ((data.get("data") or {}).get("creationsBatch") or {}).get("results") or []
         batch = [
             {
@@ -383,33 +405,33 @@ class Cults(Source):
         cands = self.candidates(free, safe)
         with self.lock:
             due = time.time() - self.last_call > self.MIN_INTERVAL
-        # Auffüllen, wenn der Vorrat leer ist oder der Abstand zum letzten Aufruf es erlaubt.
-        # Ein leeres Zeitfenster (frühe Jahre) wird bis zu dreimal neu gewürfelt.
+        # Refill when the pool is empty or enough time has passed since the last call.
+        # An empty week (early years) is rolled again up to three times.
         tries = 3 if not cands else (1 if due else 0)
         for _ in range(tries):
             try:
                 self.fill(free)
             except Exception as exc:
                 if cands:
-                    log.warning("cults: Auffüllen fehlgeschlagen: %s", exc)
+                    log.warning("cults: refill failed: %s", exc)
                     break
                 raise
             cands = self.candidates(free, safe)
             if cands:
                 break
         if not cands:
-            raise RuntimeError("Kein passendes Modell im Vorrat")
+            raise RuntimeError("No matching model in the pool")
         return dict(random.choice(cands))
 
 
 SOURCES = OrderedDict((s.key, s) for s in (MakerWorld(), Printables(), Cults(), Thingiverse()))
 
 
-# ------------------------------------------------------------- Ratenbegrenzung
+# ----------------------------------------------------------------- rate limit
 
 
 class RateLimiter:
-    """Einfaches Fenster pro Client: höchstens N Würfe je Minute."""
+    """Simple window per client: at most N rolls per minute."""
 
     def __init__(self, per_minute):
         self.per_minute = per_minute
@@ -419,7 +441,7 @@ class RateLimiter:
     def allow(self, client):
         now = time.time()
         with self.lock:
-            if len(self.hits) > 10_000:  # Speicher begrenzen
+            if len(self.hits) > 10_000:  # limit memory
                 self.hits = {k: v for k, v in self.hits.items() if v and v[-1] > now - 60}
             times = [t for t in self.hits.get(client, []) if t > now - 60]
             if len(times) >= self.per_minute:
@@ -455,7 +477,7 @@ SECURITY_HEADERS = {
 }
 
 
-# --------------------------------------------------------------------- Server
+# --------------------------------------------------------------------- server
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -471,6 +493,16 @@ class Handler(BaseHTTPRequestHandler):
             if fwd:
                 return fwd.split(",")[0].strip()[:64]
         return self.client_address[0]
+
+    def public_url(self):
+        """PUBLIC_URL, or the address the page was requested under (for link previews)."""
+        if PUBLIC_URL:
+            return PUBLIC_URL
+        return derive_public_url(
+            self.headers.get("X-Forwarded-Host") if TRUST_PROXY else None,
+            self.headers.get("X-Forwarded-Proto") if TRUST_PROXY else None,
+            self.headers.get("Host"),
+        )
 
     def _send(self, code, body, ctype, cache="no-store", extra=None):
         self.send_response(code)
@@ -498,7 +530,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/random":
             params = urllib.parse.parse_qs(query, max_num_fields=5)
             src = SOURCES.get((params.get("source") or ["makerworld"])[0])
-            # Fehler tragen einen Code, den die Seite in die gewählte Sprache übersetzt
+            # Errors carry a code that the page translates into the chosen language
             if not src:
                 self._json(404, {"code": "unknown_source", "error": "Unknown platform"})
                 return
@@ -530,7 +562,7 @@ class Handler(BaseHTTPRequestHandler):
         if not file.startswith(STATIC_DIR + os.sep) or not os.path.isfile(file):
             self._send(404, b"not found", "text/plain")
             return
-        # Feste Liste statt Ableitung aus dem Pfad: nur bekannte Dateitypen werden ausgeliefert
+        # Fixed list instead of guessing from the path: only known file types are served
         ctype = STATIC_TYPES.get(os.path.splitext(file)[1].lower())
         if not ctype:
             self._send(404, b"not found", "text/plain")
@@ -538,11 +570,12 @@ class Handler(BaseHTTPRequestHandler):
         with open(file, "rb") as fh:
             body = fh.read()
         if file.endswith(".html"):
-            body = body.replace(b"__PUBLIC_URL__", PUBLIC_URL.encode())
+            # The regex runs on the static file only; values from the request are inserted afterwards
             if safe_source_url():
                 body = body.replace(b"__SOURCE_URL__", safe_source_url().encode())
             else:
                 body = re.sub(rb"<!--source-->.*?<!--/source-->", b"", body, flags=re.S)
+            body = body.replace(b"__PUBLIC_URL__", self.public_url().encode())
         self._send(200, body, ctype, "public, max-age=300")
 
 
@@ -551,5 +584,5 @@ if __name__ == "__main__":
         print(__version__)
         raise SystemExit(0)
     active = ", ".join(s.name for s in SOURCES.values() if s.enabled)
-    log.info("Print Roulette läuft auf Port %s; aktive Quellen: %s", PORT, active)
+    log.info("Print Roulette listening on port %s; active sources: %s", PORT, active)
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

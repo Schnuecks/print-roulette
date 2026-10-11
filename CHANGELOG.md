@@ -2,6 +2,14 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
+## Unveröffentlicht
+
+- Docker-Image auch für arm64 (z. B. Raspberry Pi).
+- `PUBLIC_URL` ist jetzt optional: Ohne Angabe nimmt die App die Adresse aus der Anfrage (`Host`, hinter einem Proxy `X-Forwarded-Host`/`-Proto`). Vorher zeigte das Vorschaubild ohne `PUBLIC_URL` auf roulette.hessis.eu. Nur einfache Hostnamen werden übernommen.
+- Der User-Agent nennt ohne `PUBLIC_URL` die Projektseite statt roulette.hessis.eu.
+- Tests mit der Standardbibliothek (`python -m unittest`), die CI führt sie bei jedem Pull Request aus.
+- Kommentare und Meldungen im Code auf Englisch, passend zur Dokumentation.
+
 ## 0.3.1
 
 - Die Seite gibt es in sechs Sprachen: Deutsch, Englisch, Französisch, Spanisch, Italienisch und Niederländisch. Vorgabe ist die Browsersprache, sonst Englisch; die Wahl oben rechts merkt sich der Browser.

@@ -20,6 +20,7 @@ Security problems go to **Security → Report a vulnerability** instead, see
    python app.py            # then open http://localhost:8080
    pip install ruff
    ruff check . && ruff format --check .
+   python -m unittest -v    # tests, standard library only
    ```
 
    Without credentials only MakerWorld and Printables are active; set `CULTS_USER`,
@@ -45,6 +46,7 @@ The pull request template has a short checklist for this.
 | `static/style.css` | Design, light and dark mode |
 | `static/fonts/` | Playfair Display and Manrope (SIL Open Font License) |
 | `static/logo.svg`, `og.png`, `apple-touch-icon.png` | Logo, link preview and app icon |
+| `tests/test_app.py` | Unit tests (standard library `unittest`, no network access) |
 
 ## License
 

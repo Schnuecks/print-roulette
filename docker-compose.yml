@@ -1,4 +1,4 @@
-# Zum lokalen Bauen aus dem Quellcode. Fertiges Image und vollständiges Beispiel: siehe README.
+# For building locally from source. Ready-made image and a complete example: see README.
 services:
   print-roulette:
     build: .
@@ -11,6 +11,6 @@ services:
     environment:
       PUBLIC_URL: http://localhost:8080
       TRUST_PROXY: "0"
-      # CULTS_USER: dein-cults-nickname
+      # CULTS_USER: your-cults-nickname
       # CULTS_API_KEY_FILE: /run/secrets/cults_api_key
       # THINGIVERSE_TOKEN_FILE: /run/secrets/thingiverse_token

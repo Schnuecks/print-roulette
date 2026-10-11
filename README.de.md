@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
   <img src="https://img.shields.io/badge/dependencies-none-4C9A2A" alt="Keine Abhängigkeiten">
   <a href="https://github.com/Schnuecks/print-roulette/pkgs/container/print-roulette"><img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker ready"></a>
-  <img src="https://img.shields.io/badge/platform-amd64-E4572E" alt="Plattform amd64">
+  <img src="https://img.shields.io/badge/platform-amd64%20%7C%20arm64-E4572E" alt="Plattform amd64 | arm64">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-4C9A2A" alt="Lizenz AGPL-3.0"></a>
   <img src="https://img.shields.io/badge/maintained-yes-4C9A2A" alt="Gepflegt">
 </p>
@@ -110,13 +110,13 @@ Jede Variable mit einem Zugang kann auch als `NAME_FILE` auf eine Datei zeigen.
 | Variable | Standard | Bedeutung |
 |---|---|---|
 | `PORT` | `8080` | Port im Container |
-| `PUBLIC_URL` | `https://roulette.hessis.eu` | Öffentliche Adresse, für das Vorschaubild geteilter Links |
+| `PUBLIC_URL` | – (aus der Anfrage) | Öffentliche Adresse für das Vorschaubild geteilter Links. Leer: wird aus der Anfrage genommen (`Host`, hinter einem Proxy `X-Forwarded-Host`/`-Proto`) |
 | `CULTS_USER`, `CULTS_API_KEY` | – | Zugang zu Cults3D |
 | `THINGIVERSE_TOKEN` | – | App-Token für Thingiverse |
 | `MW_LANG` | `en` | Sprache der MakerWorld-Links (`en`, `de`, …) |
 | `RATE_PER_MINUTE` | `30` | Würfe pro IP und Minute |
 | `TRUST_PROXY` | `1` | Clients nach `X-Forwarded-For` zählen (hinter einem Reverse Proxy); ohne Proxy `0` |
-| `USER_AGENT` | `PrintRoulette/<Version> (+PUBLIC_URL)` | User-Agent für Anfragen an die Plattformen |
+| `USER_AGENT` | `PrintRoulette/<Version> (+PUBLIC_URL oder Projekt-URL)` | User-Agent für Anfragen an die Plattformen |
 | `SOURCE_URL` | `https://github.com/Schnuecks/print-roulette` | Link auf den Quellcode im Footer; leer blendet ihn aus |
 | `PRINTABLES_MAX_ID`, `THINGIVERSE_MAX_ID` | eingebaut | Startwert für die höchste Modell-ID; die App tastet einmal am Tag nach oben |
 

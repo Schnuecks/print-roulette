@@ -1,7 +1,7 @@
 'use strict';
 
-/* Übersetzungen der Seite. Dieselben sechs Sprachen wie bei den anderen Projekten.
-   Reihenfolge der Wahl: gespeicherte Wahl, sonst Browsersprache, sonst Englisch. */
+/* Translations of the page, in six languages.
+   Order of choice: saved choice, otherwise the browser language, otherwise English. */
 
 const LANGUAGES = {
   de: 'Deutsch',
@@ -207,7 +207,7 @@ function detectLang() {
   try {
     const saved = localStorage.getItem(LANG_KEY);
     if (saved && STRINGS[saved]) return saved;
-  } catch (e) { /* privat oder gesperrt */ }
+  } catch (e) { /* private mode or blocked */ }
   for (const l of navigator.languages || [navigator.language || '']) {
     const code = String(l).slice(0, 2).toLowerCase();
     if (STRINGS[code]) return code;
@@ -222,7 +222,7 @@ function t(key, vars) {
   return text.replace(/\{(\w+)\}/g, (_, k) => (vars && vars[k] != null ? String(vars[k]) : ''));
 }
 
-// Setzt alle festen Texte der Seite: data-i18n für Text, data-i18n-<attr> für Attribute
+// Sets all fixed texts of the page: data-i18n for text, data-i18n-<attr> for attributes
 function applyStatic() {
   document.documentElement.lang = lang;
   document.querySelectorAll('[data-i18n]').forEach(n => { n.textContent = t(n.dataset.i18n); });
@@ -234,6 +234,6 @@ function applyStatic() {
 function setLang(code) {
   if (!STRINGS[code]) return;
   lang = code;
-  try { localStorage.setItem(LANG_KEY, code); } catch (e) { /* egal */ }
+  try { localStorage.setItem(LANG_KEY, code); } catch (e) { /* not important */ }
   applyStatic();
 }

@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
   <img src="https://img.shields.io/badge/dependencies-none-4C9A2A" alt="No dependencies">
   <a href="https://github.com/Schnuecks/print-roulette/pkgs/container/print-roulette"><img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker ready"></a>
-  <img src="https://img.shields.io/badge/platform-amd64-E4572E" alt="Platform amd64">
+  <img src="https://img.shields.io/badge/platform-amd64%20%7C%20arm64-E4572E" alt="Platform amd64 | arm64">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-4C9A2A" alt="License AGPL-3.0"></a>
   <img src="https://img.shields.io/badge/maintained-yes-4C9A2A" alt="Maintained">
 </p>
@@ -108,13 +108,13 @@ Every variable holding a credential can also be given as `NAME_FILE`, pointing t
 | Variable | Default | Meaning |
 |---|---|---|
 | `PORT` | `8080` | Port inside the container |
-| `PUBLIC_URL` | `https://roulette.hessis.eu` | Public address, used for the link preview image |
+| `PUBLIC_URL` | – (from the request) | Public address for the link preview image. If empty, it is taken from the request (`Host`, behind a proxy `X-Forwarded-Host`/`-Proto`) |
 | `CULTS_USER`, `CULTS_API_KEY` | – | Cults3D access |
 | `THINGIVERSE_TOKEN` | – | Thingiverse app token |
 | `MW_LANG` | `en` | Language of MakerWorld links (`en`, `de`, …) |
 | `RATE_PER_MINUTE` | `30` | Rolls per IP and minute |
 | `TRUST_PROXY` | `1` | Count clients by `X-Forwarded-For` (behind a reverse proxy); set `0` without a proxy |
-| `USER_AGENT` | `PrintRoulette/<version> (+PUBLIC_URL)` | User agent for requests to the platforms |
+| `USER_AGENT` | `PrintRoulette/<version> (+PUBLIC_URL or project URL)` | User agent for requests to the platforms |
 | `SOURCE_URL` | `https://github.com/Schnuecks/print-roulette` | Link to the source code in the footer; empty hides it |
 | `PRINTABLES_MAX_ID`, `THINGIVERSE_MAX_ID` | built in | Starting point for the highest model ID; the app probes upwards once a day |
 

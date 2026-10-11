@@ -1,4 +1,4 @@
-/* Schriften lokal: Playfair Display (Anzeige) und Manrope (Text), SIL Open Font License, siehe fonts/OFL-*.txt */
+/* Local fonts: Playfair Display (display) and Manrope (text), SIL Open Font License, see fonts/OFL-*.txt */
 @font-face { font-family:"Manrope"; font-style:normal; font-weight:400 700; font-display:swap;
   src:url("fonts/manrope-latin-ext.woff2") format("woff2"); unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 @font-face { font-family:"Manrope"; font-style:normal; font-weight:400 700; font-display:swap;
@@ -26,7 +26,7 @@ main { width:100%; max-width:560px; text-align:center; }
 h1 { font-family:var(--font-display); font-size:2.2rem; font-weight:700; letter-spacing:-.01em; margin:0; line-height:1; }
 h1 span { color:var(--gold); font-style:italic; font-weight:500; }
 
-/* Rad */
+/* Wheel */
 .wheel-wrap { position:relative; width:min(320px, 82vw); aspect-ratio:1; margin:0 auto; }
 .wheel { width:100%; height:100%; overflow:visible; }
 #wheel { transform-origin:150px 150px; transition:transform 3.2s cubic-bezier(.15,.7,.2,1); }
@@ -40,7 +40,7 @@ h1 span { color:var(--gold); font-style:italic; font-weight:500; }
 .hub:disabled { cursor:wait; }
 .hub:focus-visible, button:focus-visible, input:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
 
-/* Direktwahl und Filter */
+/* Direct choice and filters */
 .direct { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:18px; }
 .direct button { padding:8px 16px; font-family:var(--font-display); font-size:.95rem; font-weight:600; color:#fff; background:var(--btn, #555);
                  border:0; border-radius:999px; cursor:pointer; transition:transform .1s, filter .15s; }
@@ -50,7 +50,7 @@ h1 span { color:var(--gold); font-style:italic; font-weight:500; }
 .filters label { display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
 .filters input { accent-color:var(--accent); width:16px; height:16px; }
 
-/* Ergebnis */
+/* Result */
 .card { background:var(--card); border:2px solid var(--border); border-top:8px solid var(--accent); border-radius:16px;
         padding:22px; min-height:150px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:10px;
         transition:border-color .3s, box-shadow .3s; }
@@ -65,7 +65,7 @@ h1 span { color:var(--gold); font-style:italic; font-weight:500; }
 .card .error { color:#dc2626; }
 .hint { font-size:.75rem; color:var(--muted); margin:8px 0 0; }
 
-/* Verlauf */
+/* History */
 .history { margin-top:24px; text-align:left; }
 .history-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
 .history h2 { font-family:var(--font-text); font-size:.78rem; font-weight:700; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin:0; }
@@ -92,7 +92,7 @@ footer a:hover { color:var(--fg); }
   .hint { display:none; }
 }
 
-/* Sprachauswahl */
+/* Language picker */
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
 .topbar { display:flex; justify-content:flex-end; margin:-8px 0 4px; }
 .lang-select select { appearance:none; -webkit-appearance:none; font:inherit; font-size:.8rem; font-weight:600; color:var(--muted);
@@ -102,7 +102,7 @@ footer a:hover { color:var(--fg); }
 .lang-select select:hover { color:var(--fg); border-color:var(--gold); }
 .lang-select select option { color:#18181b; background:#fff; }
 
-/* Saubere Umbrüche: keine einzelnen Wörter allein in der letzten Zeile */
+/* Clean line breaks: no single word alone on the last line */
 h1, .card a.title, .card small, .card .note, .hint, footer p, .filters label { text-wrap:balance; }
 .card a.title, .card small, .card .note { max-width:42ch; }
 footer { max-width:46ch; margin-left:auto; margin-right:auto; }
