@@ -139,6 +139,12 @@ Every variable holding a credential can also be given as `NAME_FILE`, pointing t
 
 What changed in each version is listed in the [CHANGELOG](CHANGELOG.md).
 
+## How it's built
+
+Print Roulette is developed with the help of an AI coding assistant. I define the features and
+behaviour, review the changes and test them on my own server. Nothing is released without
+passing the automated checks: the test suite and a security scan of the container image.
+
 ## Support
 
 Print Roulette is free and stays free. If it found you a nice print, you can buy me a coffee

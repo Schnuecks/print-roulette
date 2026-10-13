@@ -143,6 +143,13 @@ Jede Variable mit einem Zugang kann auch als `NAME_FILE` auf eine Datei zeigen.
 
 Was sich in einer Version geändert hat, steht im [CHANGELOG](CHANGELOG.md).
 
+## Wie es entsteht
+
+Print Roulette entsteht mit Unterstützung eines KI-Assistenten. Funktionen und Verhalten lege
+ich fest, prüfe die Änderungen und teste sie auf meinem eigenen Server. Veröffentlicht wird
+nur, was die automatischen Prüfungen besteht: die Tests und ein Sicherheitsscan des Container-
+Images.
+
 ## Unterstützen
 
 Print Roulette ist kostenlos und bleibt es. Wenn es dir einen schönen Druck beschert hat, kannst
