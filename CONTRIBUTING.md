@@ -13,7 +13,7 @@ Security problems go to **Security → Report a vulnerability** instead, see
 ## Pull requests
 
 1. Open an issue first for larger changes, so we can agree on the approach.
-2. Run it locally and make sure the checks pass. The app needs only Python 3.12, no
+2. Run it locally and make sure the checks pass. The app needs only Python 3.12 or newer, no
    packages:
 
    ```bash

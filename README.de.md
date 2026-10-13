@@ -5,7 +5,7 @@
 [English](README.md) · **Deutsch**
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
+  <img src="https://img.shields.io/badge/Python-3.15-3776AB?logo=python&logoColor=white" alt="Python 3.15">
   <img src="https://img.shields.io/badge/dependencies-none-4C9A2A" alt="Keine Abhängigkeiten">
   <a href="https://github.com/Schnuecks/print-roulette/pkgs/container/print-roulette"><img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker ready"></a>
   <img src="https://img.shields.io/badge/platform-amd64%20%7C%20arm64-E4572E" alt="Plattform amd64 | arm64">
@@ -84,7 +84,7 @@ secrets:
 docker compose up -d
 ```
 
-Danach http://localhost:8080 öffnen. Ohne Docker: `python app.py` (Python 3.12, keine Pakete
+Danach http://localhost:8080 öffnen. Ohne Docker: `python app.py` (Python 3.12 oder neuer, keine Pakete
 nötig).
 
 ### Zugänge besorgen

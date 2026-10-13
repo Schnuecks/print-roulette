@@ -1,4 +1,4 @@
-FROM mirror.gcr.io/library/python:3.13-alpine
+FROM mirror.gcr.io/library/python:3.15-alpine
 WORKDIR /app
 COPY app.py .
 COPY static ./static
