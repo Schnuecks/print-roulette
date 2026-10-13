@@ -2,6 +2,11 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
+## 0.5.0
+
+- Python 3.15 im Docker-Image (vorher 3.13); die CI testet ebenfalls mit 3.15.
+- README: kurzer Abschnitt, wie das Projekt entsteht.
+
 ## 0.4.0
 
 - Docker-Image auch für arm64 (z. B. Raspberry Pi).
