@@ -177,7 +177,7 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(resp.getheader("X-Frame-Options"), "DENY")
 
     def test_index_uses_request_host_without_public_url(self):
-        with mock.patch.object(app, "PUBLIC_URL", ""):
+        with mock.patch.object(app, "PUBLIC_URL", ""), mock.patch.object(app, "TRUST_PROXY", True):
             _, body = self.get("/", {"Host": "roulette.example.com", "X-Forwarded-Proto": "https"})
         self.assertIn(b'content="https://roulette.example.com/og.png"', body)
         self.assertNotIn(b"__PUBLIC_URL__", body)
@@ -194,6 +194,100 @@ class ServerTest(unittest.TestCase):
         resp, _ = self.get("/style.css")
         self.assertEqual(resp.status, 200)
         self.assertTrue(resp.getheader("Content-Type").startswith("text/css"))
+
+    def test_index_is_private_without_public_url(self):
+        with mock.patch.object(app, "PUBLIC_URL", ""):
+            resp, _ = self.get("/")
+        self.assertTrue(resp.getheader("Cache-Control").startswith("private"))
+        with mock.patch.object(app, "PUBLIC_URL", "https://fixed.example"):
+            resp, _ = self.get("/")
+        self.assertTrue(resp.getheader("Cache-Control").startswith("public"))
+
+    def test_busy_when_all_roll_slots_are_taken(self):
+        slots = threading.BoundedSemaphore(1)
+        slots.acquire()
+        with mock.patch.object(app, "ROLL_SLOTS", slots):
+            resp, body = self.get("/api/random?source=makerworld")
+        self.assertEqual(resp.status, 503)
+        self.assertEqual(json.loads(body)["code"], "busy")
+
+
+class ClientAddressTest(unittest.TestCase):
+    def client(self, xff, trust=True, hops=1, remote="192.0.2.1"):
+        handler = app.Handler.__new__(app.Handler)
+        handler.headers = {"X-Forwarded-For": xff} if xff is not None else {}
+        handler.client_address = (remote, 12345)
+        with mock.patch.object(app, "TRUST_PROXY", trust), mock.patch.object(app, "TRUSTED_PROXY_HOPS", hops):
+            return handler.client()
+
+    def test_last_entry_is_used(self):
+        # The client may put anything in front; the proxy appends the real address at the end
+        self.assertEqual(self.client("1.1.1.1, 203.0.113.9"), "203.0.113.9")
+        self.assertEqual(self.client("9.9.9.9, 203.0.113.9"), "203.0.113.9")
+
+    def test_spoofed_front_entries_count_as_one_client(self):
+        limiter = app.RateLimiter(2)
+        clients = [self.client(f"10.0.0.{i}, 203.0.113.9") for i in range(3)]
+        self.assertEqual([limiter.allow(c) for c in clients], [True, True, False])
+
+    def test_hops_from_the_end(self):
+        self.assertEqual(self.client("6.6.6.6, 203.0.113.9, 10.0.0.2", hops=2), "203.0.113.9")
+        self.assertEqual(self.client("203.0.113.9", hops=2), "192.0.2.1")  # too few entries
+
+    def test_header_ignored_without_trust(self):
+        self.assertEqual(self.client("203.0.113.9", trust=False), "192.0.2.1")
+        self.assertEqual(self.client(None), "192.0.2.1")
+
+
+class CultsRefillTest(unittest.TestCase):
+    def make(self):
+        cults = app.Cults.__new__(app.Cults)
+        cults.user, cults.apikey, cults.enabled = "u", "k", True
+        cults.lock = threading.Lock()
+        cults.fill_lock = threading.Lock()
+        cults.pools = {False: [], True: []}
+        cults.last_call = 0.0
+        cults.paused_until = 0.0
+        return cults
+
+    def test_failure_pauses_refills(self):
+        cults = self.make()
+        calls = []
+
+        def failing_fill(free):
+            calls.append(free)
+            cults.last_call = app.time.time()
+            raise RuntimeError("api down")
+
+        cults.fill = failing_fill
+        for _ in range(3):
+            with self.assertRaises(RuntimeError):
+                cults.random()
+        self.assertEqual(len(calls), 1)  # pause after the error, no new calls
+        self.assertGreater(cults.paused_until, app.time.time())
+
+    def test_empty_pool_is_not_refilled_on_every_request(self):
+        cults = self.make()
+        calls = []
+
+        def empty_fill(free):
+            calls.append(free)
+            cults.last_call = app.time.time()
+            return 0
+
+        cults.fill = empty_fill
+        for _ in range(3):
+            with self.assertRaises(RuntimeError):
+                cults.random()
+        self.assertEqual(len(calls), 3)  # one roll tries three weeks, the next ones wait
+
+    def test_only_one_refill_at_a_time(self):
+        cults = self.make()
+        cults.fill_lock.acquire()  # another request is refilling
+        cults.fill = mock.Mock(side_effect=AssertionError("must not refill"))
+        with self.assertRaises(RuntimeError):
+            cults.random()
+        cults.fill.assert_not_called()
 
 
 if __name__ == "__main__":

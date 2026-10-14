@@ -182,6 +182,7 @@ function errorText(e, src) {
     case 'unknown_source': return () => t('unknownSource');
     case 'not_configured': return () => t('notConfigured', { name });
     case 'rate_limit': return () => t('rateLimit');
+    case 'busy': return () => t('busy');
     case 'unavailable': return () => t('unavailable', { name });
     default: return () => t('error', { msg: e.message });
   }

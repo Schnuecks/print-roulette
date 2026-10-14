@@ -2,6 +2,18 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
+## Unveröffentlicht
+
+Härtung nach einem Security-Review:
+
+- Ratenbegrenzung hinter einem Proxy: Die Client-Adresse ist jetzt der Eintrag von hinten in `X-Forwarded-For`, den der eigene Proxy gesetzt hat (`TRUSTED_PROXY_HOPS`, Standard 1). Vorne angehängte Werte des Clients zählen nicht mehr.
+- **`TRUST_PROXY` ist jetzt standardmäßig `0`.** Hinter einem Reverse Proxy muss `TRUST_PROXY=1` gesetzt werden, sonst zählen alle Besucher als ein Client.
+- Höchstens `MAX_ROLLS` Würfe gleichzeitig (Standard 8), weitere bekommen sofort eine kurze Meldung in der gewählten Sprache.
+- Kürzere Zeitlimits für Anfragen an die Plattformen (8 s, ein Wurf höchstens 20 s).
+- Cults3D: Nur eine Anfrage füllt den Vorrat gleichzeitig, auch ein leerer Vorrat wird höchstens alle 15 s nachgefüllt, nach Fehlern pausiert das Nachfüllen zwei Minuten.
+- Ohne `PUBLIC_URL` wird die Startseite mit `Cache-Control: private` ausgeliefert, damit geteilte Caches keine fremde Adresse im Vorschaubild behalten.
+- Basis-Image per Digest und GitHub Actions per Commit-SHA festgelegt; Dependabot hält beides aktuell.
+
 ## 0.5.0
 
 - Python 3.15 im Docker-Image (vorher 3.13); die CI testet ebenfalls mit 3.15.

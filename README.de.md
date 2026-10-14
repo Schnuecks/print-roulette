@@ -110,12 +110,14 @@ Jede Variable mit einem Zugang kann auch als `NAME_FILE` auf eine Datei zeigen.
 | Variable | Standard | Bedeutung |
 |---|---|---|
 | `PORT` | `8080` | Port im Container |
-| `PUBLIC_URL` | – (aus der Anfrage) | Öffentliche Adresse für das Vorschaubild geteilter Links. Leer: wird aus der Anfrage genommen (`Host`, hinter einem Proxy `X-Forwarded-Host`/`-Proto`) |
+| `PUBLIC_URL` | – (aus der Anfrage) | Öffentliche Adresse für das Vorschaubild geteilter Links, empfohlen. Leer: wird aus der Anfrage genommen (`Host`, hinter einem Proxy `X-Forwarded-Host`/`-Proto`) |
 | `CULTS_USER`, `CULTS_API_KEY` | – | Zugang zu Cults3D |
 | `THINGIVERSE_TOKEN` | – | App-Token für Thingiverse |
 | `MW_LANG` | `en` | Sprache der MakerWorld-Links (`en`, `de`, …) |
 | `RATE_PER_MINUTE` | `30` | Würfe pro IP und Minute |
-| `TRUST_PROXY` | `1` | Clients nach `X-Forwarded-For` zählen (hinter einem Reverse Proxy); ohne Proxy `0` |
+| `TRUST_PROXY` | `0` | Hinter einem Reverse Proxy `1`: Clients werden dann nach `X-Forwarded-For` gezählt, das Vorschaubild nutzt `X-Forwarded-Host`/`-Proto` |
+| `TRUSTED_PROXY_HOPS` | `1` | Anzahl der Proxys vor der App; die Client-Adresse ist der so vielte Eintrag von hinten in `X-Forwarded-For` |
+| `MAX_ROLLS` | `8` | Gleichzeitig bearbeitete Würfe; weitere Anfragen bekommen kurz „zu viel los“ |
 | `USER_AGENT` | `PrintRoulette/<Version> (+PUBLIC_URL oder Projekt-URL)` | User-Agent für Anfragen an die Plattformen |
 | `SOURCE_URL` | `https://github.com/Schnuecks/print-roulette` | Link auf den Quellcode im Footer; leer blendet ihn aus |
 | `PRINTABLES_MAX_ID`, `THINGIVERSE_MAX_ID` | eingebaut | Startwert für die höchste Modell-ID; die App tastet einmal am Tag nach oben |

@@ -108,12 +108,14 @@ Every variable holding a credential can also be given as `NAME_FILE`, pointing t
 | Variable | Default | Meaning |
 |---|---|---|
 | `PORT` | `8080` | Port inside the container |
-| `PUBLIC_URL` | – (from the request) | Public address for the link preview image. If empty, it is taken from the request (`Host`, behind a proxy `X-Forwarded-Host`/`-Proto`) |
+| `PUBLIC_URL` | – (from the request) | Public address for the link preview image, recommended. If empty, it is taken from the request (`Host`, behind a proxy `X-Forwarded-Host`/`-Proto`) |
 | `CULTS_USER`, `CULTS_API_KEY` | – | Cults3D access |
 | `THINGIVERSE_TOKEN` | – | Thingiverse app token |
 | `MW_LANG` | `en` | Language of MakerWorld links (`en`, `de`, …) |
 | `RATE_PER_MINUTE` | `30` | Rolls per IP and minute |
-| `TRUST_PROXY` | `1` | Count clients by `X-Forwarded-For` (behind a reverse proxy); set `0` without a proxy |
+| `TRUST_PROXY` | `0` | Set `1` behind a reverse proxy: clients are then counted by `X-Forwarded-For` and the link preview uses `X-Forwarded-Host`/`-Proto` |
+| `TRUSTED_PROXY_HOPS` | `1` | Number of proxies in front of the app; the client address is taken that many entries from the end of `X-Forwarded-For` |
+| `MAX_ROLLS` | `8` | Rolls handled at the same time; further requests get a short “busy” message |
 | `USER_AGENT` | `PrintRoulette/<version> (+PUBLIC_URL or project URL)` | User agent for requests to the platforms |
 | `SOURCE_URL` | `https://github.com/Schnuecks/print-roulette` | Link to the source code in the footer; empty hides it |
 | `PRINTABLES_MAX_ID`, `THINGIVERSE_MAX_ID` | built in | Starting point for the highest model ID; the app probes upwards once a day |
