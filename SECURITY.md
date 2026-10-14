@@ -27,8 +27,12 @@ models from the platforms and passes title, link and preview image on to the bro
   styles or fonts from third parties.
 - Credentials for Cults3D and Thingiverse are read from the environment or, preferably,
   from files (`*_FILE`, e.g. Docker secrets). They are never logged or sent to the browser.
-- Requests are rate-limited per IP (`RATE_PER_MINUTE`). Behind a reverse proxy the client
-  address comes from `X-Forwarded-For` (`TRUST_PROXY=1`); without a proxy set
-  `TRUST_PROXY=0`, otherwise clients could choose their own address for the limit.
+- Requests are rate-limited per IP (`RATE_PER_MINUTE`) and at most `MAX_ROLLS` rolls run at
+  the same time. Requests to the platforms time out after a few seconds, and Cults3D is
+  refilled by one request at a time with a pause after errors.
+- `X-Forwarded-*` headers are ignored unless `TRUST_PROXY=1`. Behind a proxy the client
+  address is taken `TRUSTED_PROXY_HOPS` entries from the end of `X-Forwarded-For`, so values a
+  client puts in front do not count. Only enable it behind a proxy that sets the header.
+- Base image and GitHub Actions are pinned to digests and commit SHAs; Dependabot updates them.
 - The container runs as an unprivileged user and works with a read-only file system and
   without capabilities.

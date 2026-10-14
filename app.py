@@ -15,14 +15,21 @@ import urllib.request
 from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 
 PORT = int(os.environ.get("PORT", "8080"))
 STATIC_DIR = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "static"))
 DAY = 24 * 3600
 MAX_BODY = 8 * 1024 * 1024  # largest expected response (a sitemap page is about 1.3 MB)
 RATE_PER_MINUTE = int(os.environ.get("RATE_PER_MINUTE", "30"))  # rolls per IP and minute
-TRUST_PROXY = os.environ.get("TRUST_PROXY", "1") == "1"  # use X-Forwarded-* from the reverse proxy
+TRUST_PROXY = os.environ.get("TRUST_PROXY", "0") == "1"  # use X-Forwarded-* from the reverse proxy
+# How many trusted proxies stand in front of the app; the client address is that many entries
+# from the end of X-Forwarded-For (the front entries are chosen by the client and not trusted)
+TRUSTED_PROXY_HOPS = max(1, int(os.environ.get("TRUSTED_PROXY_HOPS", "1")))
+# Rolls handled at the same time; further requests get "busy" right away instead of piling up
+MAX_ROLLS = max(1, int(os.environ.get("MAX_ROLLS", "8")))
+UPSTREAM_TIMEOUT = 8  # seconds per request to a platform
+ROLL_DEADLINE = 20  # seconds for all attempts of one roll
 # Public address for link previews; empty means: derive it from the request (Host header)
 PUBLIC_URL = os.environ.get("PUBLIC_URL", "").strip().rstrip("/")
 # Link to the source code in the footer (AGPL); empty hides it
@@ -114,7 +121,7 @@ def secret(name):
     return os.environ.get(name, "").strip()
 
 
-def http(url, data=None, headers=None, timeout=20):
+def http(url, data=None, headers=None, timeout=UPSTREAM_TIMEOUT):
     hdrs = {"User-Agent": UA, "Accept": "application/json, application/xml, text/xml"}
     hdrs.update(headers or {})
     body = None
@@ -269,7 +276,10 @@ class RandomIdSource(Source):
 
     def random(self, free=False, safe=True):
         self.probe_in_background()
+        deadline = time.monotonic() + ROLL_DEADLINE
         for _ in range(self.attempts):
+            if time.monotonic() > deadline:
+                break
             model = self.exists(random.randint(1, self.max_id))
             if model and passes(model, free, safe):
                 return model
@@ -354,6 +364,8 @@ class Cults(Source):
     WINDOW = 7 * DAY
     POOL_MAX = 500
     MIN_INTERVAL = 180  # seconds between two API calls, keeps well below the daily limit (about 500)
+    EMPTY_INTERVAL = 15  # an empty pool may be refilled sooner, but not on every request
+    BACKOFF = 120  # pause after a failed API call
 
     def __init__(self):
         self.user, self.apikey = secret("CULTS_USER"), secret("CULTS_API_KEY")
@@ -362,6 +374,8 @@ class Cults(Source):
         self.lock = threading.Lock()
         self.pools = {False: [], True: []}  # key: free models only?
         self.last_call = 0.0
+        self.paused_until = 0.0
+        self.fill_lock = threading.Lock()  # only one refill at a time
 
     def fill(self, free):
         auth = base64.b64encode(f"{self.user}:{self.apikey}".encode()).decode()
@@ -403,22 +417,33 @@ class Cults(Source):
 
     def random(self, free=False, safe=True):
         cands = self.candidates(free, safe)
+        now = time.time()
         with self.lock:
-            due = time.time() - self.last_call > self.MIN_INTERVAL
-        # Refill when the pool is empty or enough time has passed since the last call.
-        # An empty week (early years) is rolled again up to three times.
-        tries = 3 if not cands else (1 if due else 0)
-        for _ in range(tries):
+            since = now - self.last_call
+            paused = now < self.paused_until
+        # Refill when the pool is empty (not more often than EMPTY_INTERVAL) or MIN_INTERVAL has
+        # passed. Never during a pause after an error, and only one request refills at a time;
+        # the others use the pool or get "unavailable". An empty week (early years) is rolled
+        # again up to three times.
+        if paused:
+            tries = 0
+        elif not cands:
+            tries = 3 if since > self.EMPTY_INTERVAL else 0
+        else:
+            tries = 1 if since > self.MIN_INTERVAL else 0
+        if tries and self.fill_lock.acquire(blocking=False):
             try:
-                self.fill(free)
+                for _ in range(tries):
+                    self.fill(free)
+                    cands = self.candidates(free, safe)
+                    if cands:
+                        break
             except Exception as exc:
-                if cands:
-                    log.warning("cults: refill failed: %s", exc)
-                    break
-                raise
-            cands = self.candidates(free, safe)
-            if cands:
-                break
+                with self.lock:
+                    self.paused_until = time.time() + self.BACKOFF
+                log.warning("cults: refill failed, pausing %ss: %s", self.BACKOFF, exc)
+            finally:
+                self.fill_lock.release()
         if not cands:
             raise RuntimeError("No matching model in the pool")
         return dict(random.choice(cands))
@@ -453,6 +478,7 @@ class RateLimiter:
 
 
 LIMITER = RateLimiter(RATE_PER_MINUTE)
+ROLL_SLOTS = threading.BoundedSemaphore(MAX_ROLLS)
 
 STATIC_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -488,10 +514,13 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     def client(self):
+        """Client address for the rate limit. Behind TRUSTED_PROXY_HOPS proxies it is that many
+        entries from the end of X-Forwarded-For; entries further to the front come from the
+        client and could be chosen freely."""
         if TRUST_PROXY:
-            fwd = self.headers.get("X-Forwarded-For", "")
-            if fwd:
-                return fwd.split(",")[0].strip()[:64]
+            hops = [h.strip() for h in self.headers.get("X-Forwarded-For", "").split(",") if h.strip()]
+            if len(hops) >= TRUSTED_PROXY_HOPS:
+                return hops[-TRUSTED_PROXY_HOPS][:64]
         return self.client_address[0]
 
     def public_url(self):
@@ -542,6 +571,11 @@ class Handler(BaseHTTPRequestHandler):
                 return
             free = (params.get("free") or ["0"])[0] == "1"
             safe = (params.get("nsfw") or ["0"])[0] != "1"
+            if not ROLL_SLOTS.acquire(blocking=False):
+                self._json(
+                    503, {"code": "busy", "error": "Too many rolls at the same time"}, extra={"Retry-After": "5"}
+                )
+                return
             try:
                 model = clean_model(src.random(free=free, safe=safe))
                 model.update({"source": src.key, "sourceName": src.name, "color": src.color})
@@ -549,6 +583,8 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as exc:
                 log.warning("%s: %s", src.key, exc)
                 self._json(502, {"code": "unavailable", "error": f"{src.name} is not responding"})
+            finally:
+                ROLL_SLOTS.release()
             return
         if path == "/healthz":
             self._send(200, b"ok", "text/plain")
@@ -576,7 +612,9 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 body = re.sub(rb"<!--source-->.*?<!--/source-->", b"", body, flags=re.S)
             body = body.replace(b"__PUBLIC_URL__", self.public_url().encode())
-        self._send(200, body, ctype, "public, max-age=300")
+        # Without PUBLIC_URL the page contains the requested host, so shared caches must not keep it
+        cache = "private, max-age=300" if file.endswith(".html") and not PUBLIC_URL else "public, max-age=300"
+        self._send(200, body, ctype, cache)
 
 
 if __name__ == "__main__":
