@@ -2,7 +2,7 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
-## Unveröffentlicht
+## 0.5.1
 
 Härtung nach einem Security-Review:
 
