@@ -9,6 +9,8 @@
   <img src="https://img.shields.io/badge/dependencies-none-4C9A2A" alt="No dependencies">
   <a href="https://github.com/Schnuecks/print-roulette/pkgs/container/print-roulette"><img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker ready"></a>
   <img src="https://img.shields.io/badge/platform-amd64%20%7C%20arm64-E4572E" alt="Platform amd64 | arm64">
+  <a href="https://github.com/Schnuecks/print-roulette/actions/workflows/ci.yml"><img src="https://github.com/Schnuecks/print-roulette/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Schnuecks/print-roulette/actions/workflows/zap.yml"><img src="https://github.com/Schnuecks/print-roulette/actions/workflows/zap.yml/badge.svg" alt="ZAP scan"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-4C9A2A" alt="License AGPL-3.0"></a>
   <img src="https://img.shields.io/badge/maintained-yes-4C9A2A" alt="Maintained">
 </p>
@@ -138,6 +140,10 @@ Every variable holding a credential can also be given as `NAME_FILE`, pointing t
 - Fonts are served locally; apart from the platforms' preview images the page loads nothing
   from third parties.
 - CI checks the code with Ruff (including security rules) and scans the image with Trivy.
+- Every change also runs an OWASP ZAP baseline scan against the running container.
+- Before the first release, an AI-assisted security review checked the rate limit, the proxy
+  handling and the calls to the platforms; the findings are fixed in versions 0.5.1 and 0.5.2
+  (see the [changelog](CHANGELOG.md)).
 
 What changed in each version is listed in the [CHANGELOG](CHANGELOG.md).
 
