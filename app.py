@@ -15,7 +15,7 @@ import urllib.request
 from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "0.5.1"
+__version__ = "0.5.2"
 
 PORT = int(os.environ.get("PORT", "8080"))
 STATIC_DIR = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "static"))
@@ -43,17 +43,22 @@ log = logging.getLogger("roulette")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 # Links and images sent to the browser may only point to these hosts
-ALLOWED_HOSTS = {
-    "makerworld.com",
-    "www.printables.com",
+# Hosts that preview images come from; the CSP allows images only from these (MakerWorld has none)
+IMAGE_HOSTS = (
     "media.printables.com",
-    "cults3d.com",
     "images.cults3d.com",
     "fbi.cults3d.com",
-    "www.thingiverse.com",
     "cdn.thingiverse.com",
     "resize.thingiverse.com",
-}
+)
+# Hosts of the model pages the result links to
+LINK_HOSTS = (
+    "makerworld.com",
+    "www.printables.com",
+    "cults3d.com",
+    "www.thingiverse.com",
+)
+ALLOWED_HOSTS = frozenset(IMAGE_HOSTS + LINK_HOSTS)
 
 
 def safe_url(url):
@@ -492,7 +497,8 @@ STATIC_TYPES = {
 
 SECURITY_HEADERS = {
     "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; "
-    "img-src 'self' https:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; "
+    "img-src 'self' " + " ".join(f"https://{h}" for h in IMAGE_HOSTS) + "; "
+    "font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; "
     "form-action 'none'; frame-ancestors 'none'",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
@@ -500,6 +506,9 @@ SECURITY_HEADERS = {
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Resource-Policy": "same-origin",
+    # credentialless instead of require-corp: the preview images come from foreign hosts that
+    # send no Cross-Origin-Resource-Policy header and would not load with require-corp
+    "Cross-Origin-Embedder-Policy": "credentialless",
 }
 
 

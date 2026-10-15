@@ -2,6 +2,14 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
+## 0.5.2
+
+Nach dem ZAP-Baseline-Scan (keine echte Lücke, nur Härtung):
+
+- Content-Security-Policy: Bilder nur noch von den Bild-Hosts der Plattformen statt von jeder HTTPS-Adresse.
+- Neuer Header `Cross-Origin-Embedder-Policy: credentialless`; die Vorschaubilder fremder Hosts laden weiter.
+- `.zap/rules.tsv` blendet die Fehlalarme des Scans aus (fehlende `Sec-Fetch-*` in ZAPs Anfragen, Cache-Hinweise, Wörter in JavaScript-Kommentaren).
+
 ## 0.5.1
 
 Härtung nach einem Security-Review:

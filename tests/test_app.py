@@ -212,6 +212,27 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(json.loads(body)["code"], "busy")
 
 
+class ContentSecurityPolicyTest(unittest.TestCase):
+    def directive(self, name):
+        csp = app.SECURITY_HEADERS["Content-Security-Policy"]
+        parts = [p.strip().split() for p in csp.split(";") if p.strip()]
+        return next(p[1:] for p in parts if p[0] == name)
+
+    def test_img_src_has_no_wildcard(self):
+        sources = self.directive("img-src")
+        self.assertNotIn("https:", sources)
+        self.assertNotIn("*", " ".join(sources))
+
+    def test_every_image_host_is_allowed_in_img_src(self):
+        sources = self.directive("img-src")
+        for host in app.IMAGE_HOSTS:
+            self.assertIn(f"https://{host}", sources)
+            self.assertEqual(app.safe_url(f"https://{host}/x.png"), f"https://{host}/x.png")
+
+    def test_embedder_policy(self):
+        self.assertEqual(app.SECURITY_HEADERS["Cross-Origin-Embedder-Policy"], "credentialless")
+
+
 class ClientAddressTest(unittest.TestCase):
     def client(self, xff, trust=True, hops=1, remote="192.0.2.1"):
         handler = app.Handler.__new__(app.Handler)
