@@ -142,6 +142,11 @@ Jede Variable mit einem Zugang kann auch als `NAME_FILE` auf eine Datei zeigen.
 - Schriften und Icons kommen vom eigenen Server, die Seite lädt außer den Vorschaubildern der
   Plattformen nichts von Dritten.
 - Die CI prüft den Code mit Ruff (inklusive Sicherheitsregeln) und scannt das Image mit Trivy.
+- Jede Änderung durchläuft zusätzlich einen OWASP-ZAP-Baseline-Scan gegen den laufenden
+  Container.
+- Vor dem ersten Release hat ein KI-gestützter Sicherheits-Review die Ratenbegrenzung, den
+  Umgang mit dem Reverse Proxy und die Abfragen bei den Plattformen geprüft; die Funde sind in
+  den Versionen 0.5.1 und 0.5.2 behoben.
 
 Was sich in einer Version geändert hat, steht im [CHANGELOG](CHANGELOG.md).
 
