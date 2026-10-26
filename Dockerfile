@@ -1,5 +1,5 @@
 # Pinned to the digest of the multi-platform index; Dependabot keeps it current
-FROM mirror.gcr.io/library/python:3.15-alpine@sha256:2699b90f4d562a22e2dd076c82f964032f64814204bff36d271a54ba4cc2c7e2
+FROM mirror.gcr.io/library/python:3.15-alpine@sha256:d44b1254cb92329418d164b22b20d86bbd3869d48e80e09e476531a409a728bb
 WORKDIR /app
 COPY app.py .
 COPY static ./static
