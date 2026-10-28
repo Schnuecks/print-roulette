@@ -6,6 +6,7 @@ import os
 import tempfile
 import threading
 import unittest
+import urllib.error
 from http.server import ThreadingHTTPServer
 from unittest import mock
 
@@ -267,6 +268,7 @@ class CultsRefillTest(unittest.TestCase):
         cults.lock = threading.Lock()
         cults.fill_lock = threading.Lock()
         cults.pools = {False: [], True: []}
+        cults.used = {False: [], True: []}
         cults.last_call = 0.0
         cults.paused_until = 0.0
         return cults
@@ -309,6 +311,84 @@ class CultsRefillTest(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             cults.random()
         cults.fill.assert_not_called()
+
+    def test_shown_models_do_not_repeat_until_the_pool_is_used_up(self):
+        cults = self.make()
+        cults.last_call = app.time.time()  # no refill during the test
+        cults.pools[False] = [{"url": f"https://cults3d.com/en/{i}"} for i in range(5)]
+        urls = [cults.random()["url"] for _ in range(5)]
+        self.assertEqual(len(set(urls)), 5)
+        self.assertEqual(cults.pools[False], [])
+        self.assertIn(cults.random()["url"], urls)  # nothing new left: an older one instead of an error
+
+    def test_fill_reads_all_weeks_and_skips_known_models(self):
+        cults = self.make()
+        cults.used[False] = [{"url": "https://cults3d.com/en/old"}]
+
+        def week(*names):
+            return {"results": [{"name": n, "url": f"https://cults3d.com/en/{n}", "safe": True} for n in names]}
+
+        answer = {"data": {"w0": week("a", "b"), "w1": week("old"), "w2": None, "w3": week("c"), "w4": week()}}
+        with mock.patch.object(app, "http", return_value=json.dumps(answer)) as fake:
+            cults.fill(False)
+        variables = fake.call_args.args[1]["variables"]
+        self.assertEqual(len([k for k in variables if k.startswith("a")]), app.Cults.WEEKS)
+        self.assertEqual([m["title"] for m in cults.pools[False]], ["a", "b", "c"])
+
+
+class MakerWorldTest(unittest.TestCase):
+    API_ANSWER = {
+        "id": 42,
+        "title": "原名",
+        "titleTranslated": "Nice model",
+        "coverUrl": "https://makerworld.bblmw.com/makerworld/model/x.jpg",
+        "designCreator": {"name": "maker"},
+        "nsfw": False,
+        "paidSetting": {"isPaid": False},
+        "isPointRedeemable": False,
+    }
+
+    def make(self, answers):
+        """MakerWorld with one sitemap page holding model 42; answers are returned by the API in turn."""
+        mw = app.MakerWorld()
+        mw.sitemap_pages = lambda: ["page"]
+        mw.models_from_page = lambda url: [(42, "nice-model")]
+
+        def fake_http(url, *args, **kwargs):
+            answer = answers.pop(0)
+            if isinstance(answer, Exception):
+                raise answer
+            return json.dumps(answer)
+
+        return mw, mock.patch.object(app, "http", side_effect=fake_http)
+
+    def test_details_from_the_api(self):
+        mw, patch = self.make([self.API_ANSWER])
+        with patch:
+            model = app.clean_model(mw.random())
+        self.assertEqual(model["title"], "Nice model")
+        self.assertEqual(model["creator"], "maker")
+        self.assertEqual(model["image"], self.API_ANSWER["coverUrl"])
+        self.assertEqual(model["url"], f"https://makerworld.com/{mw.LANG}/models/42-nice-model")
+
+    def test_filters_apply(self):
+        paid = {**self.API_ANSWER, "paidSetting": {"isPaid": True}}
+        nsfw = {**self.API_ANSWER, "nsfw": True}
+        gone = urllib.error.HTTPError("u", 404, "not found", None, None)
+        mw, patch = self.make([paid, nsfw, gone, self.API_ANSWER])
+        with patch:
+            model = mw.random(free=True, safe=True)
+        self.assertFalse(model["_paid"] or model["_nsfw"])
+
+    def test_api_failure(self):
+        down = urllib.error.URLError("down")
+        mw, patch = self.make([down, down])
+        with patch:
+            with self.assertRaises(urllib.error.URLError):
+                mw.random(free=False, safe=True)  # filters on: no unchecked model
+            model = mw.random(free=False, safe=False)  # filters off: the link from the sitemap is enough
+        self.assertEqual(model["title"], "Nice Model")
+        self.assertIsNone(model["image"])
 
 
 if __name__ == "__main__":

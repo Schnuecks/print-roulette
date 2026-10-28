@@ -15,7 +15,7 @@ import urllib.request
 from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "0.5.2"
+__version__ = "0.6.0"
 
 PORT = int(os.environ.get("PORT", "8080"))
 STATIC_DIR = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "static"))
@@ -43,8 +43,9 @@ log = logging.getLogger("roulette")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 # Links and images sent to the browser may only point to these hosts
-# Hosts that preview images come from; the CSP allows images only from these (MakerWorld has none)
+# Hosts that preview images come from; the CSP allows images only from these
 IMAGE_HOSTS = (
+    "makerworld.bblmw.com",
     "media.printables.com",
     "images.cults3d.com",
     "fbi.cults3d.com",
@@ -182,10 +183,15 @@ def passes(model, free, safe):
 
 
 class MakerWorld(Source):
+    """Rolls a model from the public sitemaps, then asks the model API for image, creator and flags."""
+
     key, name, color = "makerworld", "MakerWorld", "#00AE42"
+    can_free = can_nsfw = True
     BASE = "https://makerworld.com"
+    API = "https://makerworld.com/api/v1/design-service/design/%d"
     LANG = os.environ.get("MW_LANG", "en")
     LOC_RE = re.compile(r"<loc>([^<]+)</loc>")
+    attempts = 6
 
     def __init__(self):
         self.lock = threading.Lock()
@@ -216,13 +222,42 @@ class MakerWorld(Source):
                 self.cache.popitem(last=False)
         return models
 
+    def details(self, mid, slug):
+        """Return the model dict, or None if the model is gone."""
+        try:
+            data = json.loads(http(self.API % mid))
+        except urllib.error.HTTPError as exc:
+            if exc.code in (403, 404):
+                return None
+            raise
+        if not data.get("id"):
+            return None
+        return {
+            "id": str(mid),
+            "title": data.get("titleTranslated") or data.get("title") or slug_title(slug),
+            "image": data.get("coverUrl"),
+            "creator": (data.get("designCreator") or {}).get("name"),
+            "url": f"{self.BASE}/{self.LANG}/models/{mid}-{slug}",
+            "_nsfw": bool(data.get("nsfw")),
+            "_paid": bool((data.get("paidSetting") or {}).get("isPaid")) or bool(data.get("isPointRedeemable")),
+        }
+
     def random(self, free=False, safe=True):
-        # The sitemap has neither price nor NSFW flags, so the filters cannot apply here
         pages = self.sitemap_pages()
-        for _ in range(3):
+        deadline = time.monotonic() + ROLL_DEADLINE
+        for _ in range(self.attempts):
+            if time.monotonic() > deadline:
+                break
             models = self.models_from_page(random.choice(pages))
-            if models:
-                mid, slug = random.choice(models)
+            if not models:
+                continue
+            mid, slug = random.choice(models)
+            try:
+                model = self.details(mid, slug)
+            except Exception:
+                # Without the API the filters cannot be checked; without filters the link is enough
+                if free or safe:
+                    raise
                 return {
                     "id": str(mid),
                     "title": slug_title(slug),
@@ -230,7 +265,9 @@ class MakerWorld(Source):
                     "creator": None,
                     "url": f"{self.BASE}/{self.LANG}/models/{mid}-{slug}",
                 }
-        raise RuntimeError("No models in the loaded sitemap pages")
+            if model and passes(model, free, safe):
+                return model
+        raise RuntimeError("No matching model found after several attempts")
 
 
 # --------------------------------------------- random ID below an upper bound
@@ -353,18 +390,30 @@ class Thingiverse(RandomIdSource):
 # -------------------------------------------------------------------- Cults3D
 
 
+def weeks_query(weeks, per_week, fields):
+    """One GraphQL query with a creationsBatch for each week, named w0, w1, …"""
+    params = ", ".join(f"$a{i}: ISO8601DateTime, $b{i}: ISO8601DateTime" for i in range(weeks))
+    batches = " ".join(
+        f"w{i}: creationsBatch(limit: {per_week}, offset: 0, onlyFree: $free, "
+        f"submittedAfter: $a{i}, submittedBefore: $b{i}) {{ results {{ {fields} }} }}"
+        for i in range(weeks)
+    )
+    return f"query($free: Boolean, {params}) {{ {batches} }}"
+
+
 class Cults(Source):
-    """Official API. Rolls a random week since 2014 and keeps the results in a pool."""
+    """Official API. Rolls several random weeks since 2014 in one call and keeps the results in a
+    pool; a model leaves the pool once it was shown, so rolls in a row do not repeat."""
 
     key, name, color = "cults", "Cults3D", "#822EF5"
     can_free = can_nsfw = True
     API = "https://cults3d.com/graphql"
-    QUERY = """query($after: ISO8601DateTime, $before: ISO8601DateTime, $free: Boolean) {
-      creationsBatch(limit: 50, offset: 0, onlyFree: $free, submittedAfter: $after, submittedBefore: $before) {
-        results {
-          name(locale: EN) url(locale: EN) illustrationImageUrl safe
-          price(currency: EUR) { cents } creator { nick }
-        } } }"""
+    WEEKS = 5  # weeks per API call; one week alone is often a series by the same creator
+    PER_WEEK = 10
+    FIELDS = (
+        "name(locale: EN) url(locale: EN) illustrationImageUrl safe price(currency: EUR) { cents } creator { nick }"
+    )
+    QUERY = weeks_query(WEEKS, PER_WEEK, FIELDS)
     START = 1388534400  # 2014-01-01, launch of Cults
     WINDOW = 7 * DAY
     POOL_MAX = 500
@@ -377,26 +426,26 @@ class Cults(Source):
         if not (self.user and self.apikey):
             self.enabled, self.reason = False, "No API key (CULTS_USER / CULTS_API_KEY) configured"
         self.lock = threading.Lock()
-        self.pools = {False: [], True: []}  # key: free models only?
+        self.pools = {False: [], True: []}  # not shown yet; key: free models only?
+        self.used = {False: [], True: []}  # already shown, used again only when nothing new is left
         self.last_call = 0.0
         self.paused_until = 0.0
         self.fill_lock = threading.Lock()  # only one refill at a time
 
     def fill(self, free):
         auth = base64.b64encode(f"{self.user}:{self.apikey}".encode()).decode()
-        after = random.randint(self.START, int(time.time()) - self.WINDOW)
         iso = lambda t: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(t))  # noqa: E731
+        variables = {"free": free}
+        for i in range(self.WEEKS):
+            after = random.randint(self.START, int(time.time()) - self.WINDOW)
+            variables[f"a{i}"], variables[f"b{i}"] = iso(after), iso(after + self.WINDOW)
         with self.lock:
             self.last_call = time.time()
-        raw = http(
-            self.API,
-            {"query": self.QUERY, "variables": {"after": iso(after), "before": iso(after + self.WINDOW), "free": free}},
-            headers={"Authorization": f"Basic {auth}"},
-        )
+        raw = http(self.API, {"query": self.QUERY, "variables": variables}, headers={"Authorization": f"Basic {auth}"})
         data = json.loads(raw)
         if data.get("errors"):
             raise RuntimeError(data["errors"][0].get("message", "Cults API error"))
-        items = ((data.get("data") or {}).get("creationsBatch") or {}).get("results") or []
+        items = [c for week in (data.get("data") or {}).values() for c in ((week or {}).get("results") or [])]
         batch = [
             {
                 "id": c["url"].rstrip("/").rsplit("/", 1)[-1],
@@ -412,27 +461,42 @@ class Cults(Source):
         ]
         with self.lock:
             pool = self.pools[free]
-            pool.extend(batch)
+            known = {m["url"] for m in pool + self.used[free]}
+            pool.extend(m for m in batch if m["url"] not in known)
             del pool[: max(0, len(pool) - self.POOL_MAX)]
         return len(batch)
 
-    def candidates(self, free, safe):
+    def candidates(self, free, safe, used=False):
         with self.lock:
-            return [m for m in self.pools[free] if passes(m, free, safe)]
+            return [m for m in (self.used if used else self.pools)[free] if passes(m, free, safe)]
+
+    def take(self, free, safe):
+        """Draw a model that was not shown yet and move it to the used ones; when nothing new is
+        left, an already shown model is better than an error."""
+        with self.lock:
+            pool, used = self.pools[free], self.used[free]
+            fresh = [i for i, m in enumerate(pool) if passes(m, free, safe)]
+            if fresh:
+                model = pool.pop(random.choice(fresh))
+                used.append(model)
+                del used[: max(0, len(used) - self.POOL_MAX)]
+                return dict(model)
+            old = [m for m in used if passes(m, free, safe)]
+            return dict(random.choice(old)) if old else None
 
     def random(self, free=False, safe=True):
-        cands = self.candidates(free, safe)
+        known = self.candidates(free, safe) or self.candidates(free, safe, used=True)
         now = time.time()
         with self.lock:
             since = now - self.last_call
             paused = now < self.paused_until
-        # Refill when the pool is empty (not more often than EMPTY_INTERVAL) or MIN_INTERVAL has
-        # passed. Never during a pause after an error, and only one request refills at a time;
-        # the others use the pool or get "unavailable". An empty week (early years) is rolled
-        # again up to three times.
+        # Refill when nothing is known yet (not more often than EMPTY_INTERVAL) or MIN_INTERVAL
+        # has passed. Never during a pause after an error, and only one request refills at a
+        # time; the others use the pool or get "unavailable". Empty weeks (early years) are
+        # rolled again up to three times.
         if paused:
             tries = 0
-        elif not cands:
+        elif not known:
             tries = 3 if since > self.EMPTY_INTERVAL else 0
         else:
             tries = 1 if since > self.MIN_INTERVAL else 0
@@ -440,8 +504,7 @@ class Cults(Source):
             try:
                 for _ in range(tries):
                     self.fill(free)
-                    cands = self.candidates(free, safe)
-                    if cands:
+                    if self.candidates(free, safe):
                         break
             except Exception as exc:
                 with self.lock:
@@ -449,9 +512,10 @@ class Cults(Source):
                 log.warning("cults: refill failed, pausing %ss: %s", self.BACKOFF, exc)
             finally:
                 self.fill_lock.release()
-        if not cands:
+        model = self.take(free, safe)
+        if not model:
             raise RuntimeError("No matching model in the pool")
-        return dict(random.choice(cands))
+        return model
 
 
 SOURCES = OrderedDict((s.key, s) for s in (MakerWorld(), Printables(), Cults(), Thingiverse()))
