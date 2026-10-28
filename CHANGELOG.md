@@ -2,7 +2,7 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
-## Unveröffentlicht
+## 0.6.0
 
 - MakerWorld zeigt jetzt Vorschaubild und Ersteller, und beide Filter (kostenlos, NSFW) greifen auch dort. Die Details kommen pro Wurf aus der Modell-API von MakerWorld, das Modell selbst weiter zufällig aus den Sitemaps.
 - Cults3D: Jeder API-Aufruf holt Modelle aus fünf zufälligen Wochen statt aus einer, und ein gezeigtes Modell verlässt den Vorrat. Würfe hintereinander zeigen dadurch nicht mehr fast dasselbe. Die Zahl der API-Aufrufe bleibt gleich.
