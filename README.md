@@ -45,13 +45,12 @@ for the evenings when you want to print something but don't know what.
 
 | Platform | Source | Access | Free filter | NSFW filter |
 |---|---|---|---|---|
-| MakerWorld | public sitemaps, title and link only | none | – | – |
+| MakerWorld | public sitemaps, details from the website's model API | none | ✓ | ✓ |
 | Printables | public GraphQL API, random model ID | none | ✓ | ✓ |
-| Cults3D | official GraphQL API, random week since 2014 | nickname + API key | ✓ | ✓ |
+| Cults3D | official GraphQL API, five random weeks since 2014 | nickname + API key | ✓ | ✓ |
 | Thingiverse | official REST API, random model ID | app token | always free | ✓ |
 
-Platforms without access are greyed out and left off the wheel. MakerWorld's sitemaps carry
-no price or NSFW information, so the result card says when a filter cannot apply there.
+Platforms without access are greyed out and left off the wheel.
 
 ## Quick start
 
@@ -124,9 +123,10 @@ Every variable holding a credential can also be given as `NAME_FILE`, pointing t
 
 ## How it stays friendly to the platforms
 
-- MakerWorld: the sitemap index is fetched at most once a day, sitemap pages are cached.
+- MakerWorld: the sitemap index is fetched at most once a day, sitemap pages are cached;
+  one request per roll for image, creator and filters.
 - Cults3D: at most one API call every three minutes, results are kept in a pool, well
-  below the daily limit.
+  below the daily limit. Each model is shown once before the pool repeats itself.
 - Printables and Thingiverse: one request per roll, plus a short daily probe for new IDs.
 - Every request identifies itself with an honest user agent.
 

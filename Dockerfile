@@ -6,4 +6,6 @@ COPY static ./static
 ENV PORT=8080 MW_LANG=en
 EXPOSE 8080
 USER nobody
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('PORT', '8080') + '/healthz', timeout=4)"]
 CMD ["python", "-u", "app.py"]

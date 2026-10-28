@@ -2,6 +2,14 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
+## Unveröffentlicht
+
+- MakerWorld zeigt jetzt Vorschaubild und Ersteller, und beide Filter (kostenlos, NSFW) greifen auch dort. Die Details kommen pro Wurf aus der Modell-API von MakerWorld, das Modell selbst weiter zufällig aus den Sitemaps.
+- Cults3D: Jeder API-Aufruf holt Modelle aus fünf zufälligen Wochen statt aus einer, und ein gezeigtes Modell verlässt den Vorrat. Würfe hintereinander zeigen dadurch nicht mehr fast dasselbe. Die Zahl der API-Aufrufe bleibt gleich.
+- Eine Fehlermeldung erscheint erst, wenn das Rad stehen bleibt; vorher waren die Knöpfe schon während der Drehung wieder frei.
+- Beschreibung und Linkvorschau der Seite auf Englisch, passend zur Standardsprache.
+- Das Docker-Image bringt einen eigenen `HEALTHCHECK` mit (fragt `/healthz` ab).
+
 ## 0.5.2
 
 Nach dem ZAP-Baseline-Scan (keine echte Lücke, nur Härtung):

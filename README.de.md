@@ -43,14 +43,12 @@ dessen Seite. Für die Abende, an denen du etwas drucken willst, aber nicht wei�
 
 | Plattform | Quelle | Zugang | Filter kostenlos | Filter NSFW |
 |---|---|---|---|---|
-| MakerWorld | öffentliche Sitemaps, nur Titel und Link | keiner | – | – |
+| MakerWorld | öffentliche Sitemaps, Details aus der Modell-API der Webseite | keiner | ✓ | ✓ |
 | Printables | öffentliche GraphQL-API, zufällige Modell-ID | keiner | ✓ | ✓ |
-| Cults3D | offizielle GraphQL-API, zufällige Woche seit 2014 | Nickname + API-Schlüssel | ✓ | ✓ |
+| Cults3D | offizielle GraphQL-API, fünf zufällige Wochen seit 2014 | Nickname + API-Schlüssel | ✓ | ✓ |
 | Thingiverse | offizielle REST-API, zufällige Modell-ID | App-Token | immer kostenlos | ✓ |
 
-Plattformen ohne Zugang sind ausgegraut und fehlen auf dem Rad. Die Sitemaps von MakerWorld
-enthalten weder Preis noch NSFW-Kennzeichen, deshalb sagt die Ergebniskarte dort, wenn ein
-Filter nicht greift.
+Plattformen ohne Zugang sind ausgegraut und fehlen auf dem Rad.
 
 ## Schnellstart
 
@@ -125,9 +123,9 @@ Jede Variable mit einem Zugang kann auch als `NAME_FILE` auf eine Datei zeigen.
 ## Rücksicht auf die Plattformen
 
 - MakerWorld: Der Sitemap-Index wird höchstens einmal am Tag geladen, Sitemap-Seiten werden
-  zwischengespeichert.
+  zwischengespeichert; pro Wurf eine Anfrage für Bild, Ersteller und Filter.
 - Cults3D: höchstens ein API-Aufruf alle drei Minuten, die Treffer liegen in einem Vorrat,
-  weit unter dem Tageslimit.
+  weit unter dem Tageslimit. Jedes Modell kommt einmal dran, bevor sich der Vorrat wiederholt.
 - Printables und Thingiverse: eine Anfrage pro Wurf, dazu eine kurze tägliche Suche nach
   neuen IDs.
 - Jede Anfrage gibt sich mit einem ehrlichen User-Agent zu erkennen.

@@ -159,11 +159,15 @@ async function roll(mode) {
   setAccent(src.color);
   card.classList.remove('hit');
   setCard(() => card.replaceChildren(el('small', mode === 'wheel' ? t('spinning') : t('rollingOn', { name: src.name }))));
+  // The result or the error only shows once the wheel has stopped
+  const spin = spinTo(src.key);
   try {
-    const [m] = await Promise.all([fetchModel(src), spinTo(src.key)]);
+    const m = await fetchModel(src);
+    await spin;
     show(m, src);
     remember(m);
   } catch (e) {
+    await spin;
     showError(errorText(e, src));
   } finally {
     setBusy(false);
