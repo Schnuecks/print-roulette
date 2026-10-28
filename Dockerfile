@@ -1,5 +1,7 @@
 # Pinned to the digest of the multi-platform index; Dependabot keeps it current
 FROM mirror.gcr.io/library/python:3.15-alpine@sha256:d44b1254cb92329418d164b22b20d86bbd3869d48e80e09e476531a409a728bb
+# pip is not needed at runtime; its vendored packages (urllib3, msgpack, …) only add findings
+RUN python -m pip uninstall -y -q pip && rm -rf /usr/local/lib/python3*/ensurepip
 WORKDIR /app
 COPY app.py .
 COPY static ./static
