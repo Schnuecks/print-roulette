@@ -15,7 +15,7 @@ import urllib.request
 from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 
 PORT = int(os.environ.get("PORT", "8080"))
 STATIC_DIR = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "static"))

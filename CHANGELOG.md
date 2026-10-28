@@ -2,7 +2,7 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
-## Unveröffentlicht
+## 0.6.1
 
 - pip ist nicht mehr im Docker-Image. Die App braucht es zur Laufzeit nicht, und die darin mitgelieferten Pakete (urllib3, msgpack, setuptools) lösten Funde im Image-Scan aus.
 
