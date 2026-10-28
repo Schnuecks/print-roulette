@@ -2,6 +2,10 @@
 
 Alle nennenswerten Änderungen. Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
+## Unveröffentlicht
+
+- pip ist nicht mehr im Docker-Image. Die App braucht es zur Laufzeit nicht, und die darin mitgelieferten Pakete (urllib3, msgpack, setuptools) lösten Funde im Image-Scan aus.
+
 ## 0.6.0
 
 - MakerWorld zeigt jetzt Vorschaubild und Ersteller, und beide Filter (kostenlos, NSFW) greifen auch dort. Die Details kommen pro Wurf aus der Modell-API von MakerWorld, das Modell selbst weiter zufällig aus den Sitemaps.
